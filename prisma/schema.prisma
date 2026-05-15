@@ -1,0 +1,390 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── AUTH (NextAuth v5) ────────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         Usuario  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── USUARIOS ─────────────────────────────────────────────────────────────
+
+enum Rol {
+  ADMINISTRADOR
+  PROPIETARIO
+}
+
+model Usuario {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  email         String?
+  emailVerified DateTime?
+  password      String?
+  firstName     String    @default("")
+  lastName      String    @default("")
+  rol           Rol       @default(PROPIETARIO)
+  telefono      String    @default("")
+  foto          String?
+  cargo         String    @default("")
+  isActive      Boolean   @default(true)
+  creado        DateTime  @default(now())
+  actualizado   DateTime  @updatedAt
+
+  accounts            Account[]
+  sessions            Session[]
+  parcelas            Parcela[]         @relation("ParcelaPropietario")
+  notificaciones      Notificacion[]    @relation("NotificacionDestinatario")
+  consumosRegistrados ConsumoMensual[]  @relation("ConsumoRegistradoPor")
+  pagosRegistrados    Pago[]            @relation("PagoRegistradoPor")
+  pagosAprobados      Pago[]            @relation("PagoAprobadoPor")
+  gastosRegistrados   GastoCondominio[] @relation("GastoRegistradoPor")
+  fondoRegistrados    FondoCondominio[] @relation("FondoRegistradoPor")
+  periodosGenerados   PeriodoGasto[]    @relation("PeriodoGeneradoPor")
+
+  @@map("usuarios")
+}
+
+// ─── CONFIGURACION ────────────────────────────────────────────────────────
+
+model ConfiguracionSistema {
+  id                   Int     @id @default(1)
+  nombreCondominio     String  @default("Condominio Nueva Aurora")
+  rutCondominio        String  @default("")
+  direccion            String  @default("") @db.VarChar(500)
+  telefono             String  @default("")
+  emailContacto        String  @default("")
+  logo                 String?
+
+  banco                String  @default("")
+  tipoCuenta           String  @default("")
+  numeroCuenta         String  @default("")
+  emailPagos           String  @default("")
+  rutTitular           String  @default("")
+  nombreTitular        String  @default("")
+
+  franquiciaAguaM3     Decimal @default(30) @db.Decimal(8, 2)
+  tarifaAgua1_10       Decimal @default(2000) @db.Decimal(10, 2)
+  tarifaAgua11_20      Decimal @default(2500) @db.Decimal(10, 2)
+  tarifaAgua21_30      Decimal @default(3500) @db.Decimal(10, 2)
+  tarifaAgua31_40      Decimal @default(4000) @db.Decimal(10, 2)
+  tarifaAgua41mas      Decimal @default(5000) @db.Decimal(10, 2)
+  costoLuzKwh          Decimal @default(180) @db.Decimal(10, 2)
+  montoGcNuevo         Decimal @default(15000) @db.Decimal(12, 2)
+  montoGcConHistorial  Decimal @default(25000) @db.Decimal(12, 2)
+  mensajePieEc         String  @default("") @db.VarChar(1000)
+
+  @@map("configuracion_sistema")
+}
+
+// ─── PARCELAS ─────────────────────────────────────────────────────────────
+
+enum EstadoParcela {
+  ACTIVA
+  INACTIVA
+}
+
+model Parcela {
+  id                String        @id @default(cuid())
+  numero            String        @unique
+  nombre            String        @default("")
+  propietarioId     String?
+  superficieM2      Decimal?      @db.Decimal(10, 2)
+  sector            String        @default("")
+  numeroMedidorAgua String        @default("")
+  numeroMedidorLuz  String        @default("")
+  estado            EstadoParcela @default(ACTIVA)
+  observaciones     String        @default("") @db.VarChar(500)
+  deudaAgua         Decimal       @default(0) @db.Decimal(12, 2)
+  deudaLuz          Decimal       @default(0) @db.Decimal(12, 2)
+  deudaGc           Decimal       @default(0) @db.Decimal(12, 2)
+  deudaTotal        Decimal       @default(0) @db.Decimal(12, 2)
+  creado            DateTime      @default(now())
+  actualizado       DateTime      @updatedAt
+
+  propietario   Usuario?         @relation("ParcelaPropietario", fields: [propietarioId], references: [id], onDelete: SetNull)
+  consumos      ConsumoMensual[]
+  pagos         Pago[]
+  estadosCuenta EstadoCuenta[]
+
+  @@map("parcelas")
+}
+
+// ─── CONSUMOS ─────────────────────────────────────────────────────────────
+
+model TipoConsumo {
+  id           String   @id @default(cuid())
+  nombre       String   @unique
+  descripcion  String   @default("") @db.VarChar(500)
+  unidadMedida String
+  esVariable   Boolean  @default(true)
+  color        String   @default("#17335a")
+  icono        String   @default("bolt")
+  orden        Int      @default(0)
+  activo       Boolean  @default(true)
+  creado       DateTime @default(now())
+  actualizado  DateTime @updatedAt
+
+  consumos ConsumoMensual[]
+
+  @@map("tipos_consumo")
+}
+
+enum EstadoConsumo {
+  PENDIENTE
+  CON_ESTADO_CUENTA
+  PAGO_INFORMADO
+  PAGADO
+}
+
+model ConsumoMensual {
+  id               String        @id @default(cuid())
+  parcelaId        String
+  tipoConsumoId    String
+  periodo          DateTime
+  lecturaAnterior  Decimal       @default(0) @db.Decimal(12, 2)
+  lecturaActual    Decimal       @default(0) @db.Decimal(12, 2)
+  consumoCalculado Decimal       @default(0) @db.Decimal(12, 2)
+  tarifaAplicada   Decimal       @default(0) @db.Decimal(12, 2)
+  montoConsumo     Decimal       @default(0) @db.Decimal(12, 2)
+  cargoFijo        Decimal       @default(0) @db.Decimal(12, 2)
+  totalAPagar      Decimal       @default(0) @db.Decimal(12, 2)
+  pagado           Boolean       @default(false)
+  estado           EstadoConsumo @default(PENDIENTE)
+  fechaPago        DateTime?
+  observaciones    String        @default("") @db.VarChar(500)
+  fechaLectura     DateTime?
+  registradoPorId  String?
+  creado           DateTime      @default(now())
+  actualizado      DateTime      @updatedAt
+
+  parcela       Parcela      @relation(fields: [parcelaId], references: [id], onDelete: Cascade)
+  tipoConsumo   TipoConsumo  @relation(fields: [tipoConsumoId], references: [id])
+  registradoPor Usuario?     @relation("ConsumoRegistradoPor", fields: [registradoPorId], references: [id], onDelete: SetNull)
+  estadosCuenta EstadoCuenta[] @relation("EstadoCuentaConsumos")
+  pagos         Pago[]         @relation("PagoConsumos")
+
+  @@unique([parcelaId, tipoConsumoId, periodo])
+  @@map("consumos_mensuales")
+}
+
+// ─── PAGOS ────────────────────────────────────────────────────────────────
+
+enum EstadoPago {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+  ANULADO
+}
+
+model Pago {
+  id               String     @id @default(cuid())
+  parcelaId        String
+  monto            Decimal    @db.Decimal(12, 2)
+  fechaOperacion   DateTime
+  bancoOrigen      String     @default("")
+  numeroReferencia String     @default("")
+  comprobante      String?
+  concepto         String     @default("") @db.VarChar(500)
+  estado           EstadoPago @default(PENDIENTE)
+  registradoPorId  String?
+  fechaAprobacion  DateTime?
+  aprobadoPorId    String?
+  motivoRechazo    String     @default("") @db.VarChar(500)
+  creado           DateTime   @default(now())
+  actualizado      DateTime   @updatedAt
+
+  parcela       Parcela          @relation(fields: [parcelaId], references: [id], onDelete: Cascade)
+  registradoPor Usuario?         @relation("PagoRegistradoPor", fields: [registradoPorId], references: [id], onDelete: SetNull)
+  aprobadoPor   Usuario?         @relation("PagoAprobadoPor", fields: [aprobadoPorId], references: [id], onDelete: SetNull)
+  consumos      ConsumoMensual[] @relation("PagoConsumos")
+
+  @@map("pagos")
+}
+
+enum EstadoEstadoCuenta {
+  BORRADOR
+  EMITIDO
+  PAGADO
+  PARCIAL
+}
+
+model EstadoCuenta {
+  id            String             @id @default(cuid())
+  parcelaId     String
+  periodo       DateTime
+  subtotalAgua  Decimal            @default(0) @db.Decimal(12, 2)
+  subtotalLuz   Decimal            @default(0) @db.Decimal(12, 2)
+  subtotalGc    Decimal            @default(0) @db.Decimal(12, 2)
+  deudaAnterior Decimal            @default(0) @db.Decimal(12, 2)
+  total         Decimal            @default(0) @db.Decimal(12, 2)
+  estado        EstadoEstadoCuenta @default(BORRADOR)
+  fechaEmision  DateTime?
+  pdf           String?
+  creado        DateTime           @default(now())
+  actualizado   DateTime           @updatedAt
+
+  parcela  Parcela          @relation(fields: [parcelaId], references: [id], onDelete: Cascade)
+  consumos ConsumoMensual[] @relation("EstadoCuentaConsumos")
+
+  @@unique([parcelaId, periodo])
+  @@map("estados_cuenta")
+}
+
+// ─── GASTOS ───────────────────────────────────────────────────────────────
+
+enum CategoriaGasto {
+  MANTENIMIENTO
+  SERVICIOS
+  SERVICIOS_PUBLICOS
+  REPARACION
+  OTRO
+}
+
+enum PeriodicidadGasto {
+  MENSUAL
+  PUNTUAL
+}
+
+enum EstadoGasto {
+  PENDIENTE
+  PAGADO
+}
+
+model GastoCondominio {
+  id              String            @id @default(cuid())
+  nombre          String
+  categoria       CategoriaGasto    @default(MANTENIMIENTO)
+  periodicidad    PeriodicidadGasto @default(PUNTUAL)
+  proveedor       String
+  monto           Decimal           @db.Decimal(12, 2)
+  fechaGasto      DateTime
+  estado          EstadoGasto       @default(PENDIENTE)
+  comprobante     String?
+  notas           String            @default("") @db.VarChar(500)
+  registradoPorId String?
+  creado          DateTime          @default(now())
+  actualizado     DateTime          @updatedAt
+
+  registradoPor Usuario? @relation("GastoRegistradoPor", fields: [registradoPorId], references: [id], onDelete: SetNull)
+
+  @@map("gastos_condominio")
+}
+
+model PeriodoGasto {
+  id             String   @id @default(cuid())
+  periodo        DateTime @unique
+  descripcion    String   @default("")
+  generadoPorId  String?
+  totalRecaudado Decimal  @default(0) @db.Decimal(14, 2)
+  notas          String   @default("") @db.VarChar(500)
+  creado         DateTime @default(now())
+  actualizado    DateTime @updatedAt
+
+  generadoPor Usuario? @relation("PeriodoGeneradoPor", fields: [generadoPorId], references: [id], onDelete: SetNull)
+
+  @@map("periodos_gasto")
+}
+
+enum TipoTransaccion {
+  INGRESO
+  EGRESO
+}
+
+enum OrigenTransaccion {
+  PAGO
+  GASTO
+  MANUAL
+  REVERSION_GASTO
+  REVERSION_PAGO
+}
+
+model FondoCondominio {
+  id              String            @id @default(cuid())
+  tipo            TipoTransaccion
+  concepto        String
+  monto           Decimal           @db.Decimal(12, 2)
+  fecha           DateTime
+  referencia      String            @default("")
+  observaciones   String            @default("") @db.VarChar(500)
+  origenTipo      OrigenTransaccion @default(MANUAL)
+  origenId        String?
+  categoria       String?
+  registradoPorId String?
+  creado          DateTime          @default(now())
+  actualizado     DateTime          @updatedAt
+
+  registradoPor Usuario? @relation("FondoRegistradoPor", fields: [registradoPorId], references: [id], onDelete: SetNull)
+
+  @@map("fondo_condominio")
+}
+
+// ─── NOTIFICACIONES ───────────────────────────────────────────────────────
+
+enum TipoNotificacion {
+  ESTADO_CUENTA
+  PAGO_REGISTRADO
+  PAGO_APROBADO
+  PAGO_RECHAZADO
+  COMUNICADO
+  ALERTA_MORA
+}
+
+enum EstadoEnvio {
+  PENDIENTE
+  ENVIADO
+  ERROR
+}
+
+model Notificacion {
+  id             String           @id @default(cuid())
+  destinatarioId String
+  tipo           TipoNotificacion
+  asunto         String
+  mensaje        String           @db.Text
+  parcelaId      String?
+  leido          Boolean          @default(false)
+  estadoEnvio    EstadoEnvio      @default(PENDIENTE)
+  errorDetalle   String?          @db.Text
+  creado         DateTime         @default(now())
+  actualizado    DateTime         @updatedAt
+
+  destinatario Usuario @relation("NotificacionDestinatario", fields: [destinatarioId], references: [id], onDelete: Cascade)
+
+  @@map("notificaciones")
+}

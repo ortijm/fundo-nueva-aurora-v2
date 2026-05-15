@@ -1,0 +1,120 @@
+"use server";
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
+import { getConfig } from "@/lib/services/config";
+import nodemailer from "nodemailer";
+
+function createTransport() {
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT || "587");
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS?.replace(/\s/g, "");
+  if (!host || !user || !pass) return null;
+  return nodemailer.createTransport({
+    host, port,
+    secure: port === 465,
+    auth: { user, pass },
+    tls: { rejectUnauthorized: false },
+  });
+}
+
+async function enviarComunicadoEmail(
+  to: string,
+  asunto: string,
+  mensaje: string,
+  nombreCondominio: string,
+  nombreDestinatario: string
+): Promise<{ ok: boolean; error?: string }> {
+  const transport = createTransport();
+  if (!transport) return { ok: false, error: "SMTP no configurado" };
+
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@nuevaaurora.cl";
+
+  const html = `
+    <div style="font-family: Inter, sans-serif; max-width: 580px; margin: 0 auto; padding: 32px 24px; color: #181c1e;">
+      <div style="background: #17335a; border-radius: 12px 12px 0 0; padding: 24px; text-align: center;">
+        <h1 style="color: white; font-size: 20px; margin: 0;">${nombreCondominio}</h1>
+        <p style="color: #b0c4de; font-size: 13px; margin: 6px 0 0;">Comunicado</p>
+      </div>
+      <div style="background: #f7fafc; border: 1px solid #e8ecef; border-top: none; border-radius: 0 0 12px 12px; padding: 24px;">
+        <p style="margin: 0 0 16px;">Estimado/a <strong>${nombreDestinatario}</strong>,</p>
+        <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; border: 1px solid #e8ecef;">
+          <h2 style="font-size: 16px; color: #17335a; margin: 0 0 12px;">${asunto}</h2>
+          <p style="color: #42484d; font-size: 14px; white-space: pre-wrap; margin: 0;">${mensaje}</p>
+        </div>
+        <p style="color: #8a9299; font-size: 12px; margin-top: 16px;">${nombreCondominio}</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    await transport.sendMail({ from, to, subject: asunto, html });
+    return { ok: true };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Error desconocido";
+    console.error("Comunicado email error:", msg);
+    return { ok: false, error: msg };
+  }
+}
+
+export async function enviarComunicadoAction(formData: FormData) {
+  const session = await auth();
+  if (!session || session.user.rol !== "ADMINISTRADOR") return { error: "No autorizado" };
+
+  const asunto = (formData.get("asunto") as string)?.trim();
+  const mensaje = (formData.get("mensaje") as string)?.trim();
+  const destinatariosParam = formData.get("destinatarios") as string; // "todos" | userId
+
+  if (!asunto || !mensaje) return { error: "Asunto y mensaje son requeridos" };
+
+  const config = await getConfig();
+
+  let usuarios: { id: string; email: string | null; firstName: string; lastName: string; username: string }[] = [];
+  if (destinatariosParam === "todos") {
+    usuarios = await prisma.usuario.findMany({
+      where: { rol: "PROPIETARIO", isActive: true, email: { not: null } },
+      select: { id: true, email: true, firstName: true, lastName: true, username: true },
+    });
+  } else {
+    const u = await prisma.usuario.findUnique({
+      where: { id: destinatariosParam },
+      select: { id: true, email: true, firstName: true, lastName: true, username: true },
+    });
+    if (u) usuarios = [u];
+  }
+
+  let ok = 0;
+  let errores = 0;
+
+  for (const u of usuarios) {
+    const nombre = `${u.firstName} ${u.lastName}`.trim() || u.username;
+    let estadoEnvio: "ENVIADO" | "ERROR" | "PENDIENTE" = "PENDIENTE";
+    let errorDetalle: string | null = null;
+
+    if (u.email) {
+      const result = await enviarComunicadoEmail(u.email, asunto, mensaje, config.nombreCondominio, nombre);
+      estadoEnvio = result.ok ? "ENVIADO" : "ERROR";
+      errorDetalle = result.error || null;
+      if (result.ok) ok++; else errores++;
+    } else {
+      estadoEnvio = "ERROR";
+      errorDetalle = "Sin email registrado";
+      errores++;
+    }
+
+    await prisma.notificacion.create({
+      data: {
+        destinatarioId: u.id,
+        tipo: "COMUNICADO",
+        asunto,
+        mensaje,
+        estadoEnvio,
+        errorDetalle,
+      },
+    });
+  }
+
+  revalidatePath("/admin/notificaciones");
+  return { success: true, ok, errores };
+}
