@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { getResultData } from "@/lib/server-action-utils";
 import { generarGastosComunes } from "./actions";
 import { formatPeriodo } from "@/lib/utils";
 
@@ -22,7 +23,8 @@ export function GastosClient({ periodos }: { periodos: PeriodoItem[] }) {
       success: (res) => {
         if (res.error) throw new Error(res.error);
         startTransition(() => router.refresh());
-        return `Gastos comunes generados para ${res.creados} parcelas`;
+        const d = getResultData<{ creados?: number }>(res);
+        return `Gastos comunes generados para ${d?.creados ?? 0} parcelas`;
       },
       error: (e) => e.message || "Error al generar",
     });

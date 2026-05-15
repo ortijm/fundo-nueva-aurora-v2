@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/services/email";
+import { checkRateLimit } from "@/lib/ratelimit";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
@@ -12,12 +13,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "El email es requerido" }, { status: 400 });
     }
 
+    // Rate limiting por IP
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rateCheck = await checkRateLimit(`forgot-password:${ip}`, "forgot-password");
+    if (!rateCheck.allowed) {
+      const minutes = Math.ceil(rateCheck.resetIn / 60000);
+      return NextResponse.json(
+        { error: `Demasiados intentos. Intenta de nuevo en ${minutes} minutos.` },
+        { status: 429 }
+      );
+    }
+
     const users = await prisma.usuario.findMany({
       where: { email },
     });
 
     if (users.length === 0) {
-      return NextResponse.json({ error: "No existe usuario con ese email" }, { status: 404 });
+      // No revelar si el email existe o no — respuesta genérica
+      return NextResponse.json({ success: true });
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${request.headers.get("host")}`;

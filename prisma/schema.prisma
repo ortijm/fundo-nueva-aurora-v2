@@ -7,6 +7,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── RATE LIMITING ──────────────────────────────────────────────────────────
+
+model RateLimit {
+  id        String   @id @default(cuid())
+  identifier String  // IP address or userId
+  action    String   // e.g. "login", "forgot-password"
+  attempts  Int      @default(0)
+  windowStart DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([identifier, action])
+  @@map("rate_limits")
+}
+
 // ─── AUTH (NextAuth v5) ────────────────────────────────────────────────────
 
 model Account {

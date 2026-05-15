@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { getResultData } from "@/lib/server-action-utils";
 import { enviarComunicadoAction } from "./actions";
 import { formatDate } from "@/lib/utils";
 import { Bell, Plus, Send, Check, AlertCircle, Clock } from "lucide-react";
@@ -37,12 +38,15 @@ export function NotificacionesClient({ notificaciones }: Props) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const result = await enviarComunicadoAction(fd);
-    if (result.error) {
+    if (!result.success) {
       toast.error(result.error);
       return;
     }
-    const errMsg = result.errores && result.errores > 0 ? ` · ${result.errores} error${result.errores !== 1 ? "es" : ""}` : "";
-    toast.success(`Comunicado enviado a ${result.ok} destinatario${result.ok !== 1 ? "s" : ""}${errMsg}`);
+    const d = getResultData<{ ok?: number; errores?: number }>(result);
+    const nOk = d?.ok ?? 0;
+    const nErrores = d?.errores ?? 0;
+    const errMsg = nErrores > 0 ? ` · ${nErrores} error${nErrores !== 1 ? "es" : ""}` : "";
+    toast.success(`Comunicado enviado a ${nOk} destinatario${nOk !== 1 ? "s" : ""}${errMsg}`);
     setShowModal(false);
     startTransition(() => router.refresh());
   }

@@ -22,7 +22,7 @@ export function ConfiguracionForm({ config }: { config: Config }) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const result = await guardarConfiguracion(fd);
-    if (result.error) { toast.error(result.error); return; }
+    if (!result.success) { toast.error(result.error); return; }
     toast.success("Configuración guardada");
     startTransition(() => router.refresh());
   }

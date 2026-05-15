@@ -53,7 +53,7 @@ export function FondosClient({ transacciones }: Props) {
     const result = editandoTransaccion
       ? await editarTransaccionManual(editandoTransaccion.id, fd)
       : await registrarGasto(fd);
-    if (result.error) {
+    if (!result.success) {
       toast.error(result.error);
       return;
     }
@@ -66,7 +66,7 @@ export function FondosClient({ transacciones }: Props) {
   async function handleEliminar(id: string, concepto: string) {
     if (!confirm(`¿Eliminar el gasto "${concepto}"?`)) return;
     const result = await eliminarTransaccionManual(id);
-    if (result.error) {
+    if (!result.success) {
       toast.error(result.error);
       return;
     }

@@ -51,7 +51,7 @@ export function ValidacionClient({
     setIsApproving(true);
     try {
       const result = await aprobarPago(selected);
-      if (result.error) { toast.error(result.error); return; }
+      if (!result.success) { toast.error(result.error); return; }
       toast.success("Pago aprobado e ingresado al fondo.");
       setSelected(null);
       router.refresh();
@@ -65,7 +65,7 @@ export function ValidacionClient({
     setIsRejecting(true);
     try {
       const result = await rechazarPago(selected, motivo);
-      if (result.error) { toast.error(result.error); return; }
+      if (!result.success) { toast.error(result.error); return; }
       toast.warning("Pago rechazado.");
       setShowRechazo(false);
       setMotivo("");

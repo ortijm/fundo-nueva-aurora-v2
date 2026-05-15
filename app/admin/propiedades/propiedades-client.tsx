@@ -53,7 +53,7 @@ export function PropiedadesClient({
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const result = editandoParcela ? await editarParcela(editandoParcela.id, fd) : await crearParcela(fd);
-    if (result.error) { toast.error(result.error); return; }
+    if (!result.success) { toast.error(result.error); return; }
     toast.success(editandoParcela ? "Propiedad actualizada" : "Propiedad creada");
     setShowParcelaModal(false);
     setEditandoParcela(null);
@@ -66,7 +66,7 @@ export function PropiedadesClient({
     const result = editandoPropietario
       ? await editarPropietario(editandoPropietario.id, fd)
       : await crearPropietario(fd);
-    if (result.error) { toast.error(result.error); return; }
+    if (!result.success) { toast.error(result.error); return; }
     toast.success(editandoPropietario ? "Propietario actualizado" : "Propietario creado");
     setShowPropietarioModal(false);
     setEditandoPropietario(null);
@@ -76,7 +76,7 @@ export function PropiedadesClient({
   async function handleDesactivar(id: string, nombre: string) {
     if (!confirm(`¿Desactivar a ${nombre}? Ya no podrá iniciar sesión.`)) return;
     const result = await desactivarPropietario(id);
-    if (result.error) { toast.error(result.error); return; }
+    if (!result.success) { toast.error(result.error); return; }
     toast.success("Propietario desactivado");
     startTransition(() => router.refresh());
   }

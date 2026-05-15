@@ -11,7 +11,9 @@ export default async function PropietarioConfiguracionPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const profile = await getProfile();
+  const profileResult = await getProfile();
+  if (!profileResult || !profileResult.success || !profileResult.data) redirect("/login");
+  const profile = profileResult.data;
 
   return (
     <div className="space-y-6">

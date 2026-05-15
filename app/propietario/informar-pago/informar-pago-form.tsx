@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { getResultData } from "@/lib/server-action-utils";
 import { informarPago } from "./actions";
 import { formatCLP, formatPeriodo } from "@/lib/utils";
 import { Upload, CheckSquare, Square, FileCheck } from "lucide-react";
@@ -90,8 +91,9 @@ export function InformarPagoForm({
       loading: "Enviando pago...",
       success: (res) => {
         if (res.error) throw new Error(res.error);
-        if (!res.emailAdminEnviado) {
-          toast.warning(`Pago registrado, pero la notificación al administrador no pudo enviarse (${res.emailAdminError ?? "error SMTP"}). Contáctalo directamente.`);
+        const d = getResultData<{ emailAdminEnviado?: boolean; emailAdminError?: string }>(res);
+        if (!d?.emailAdminEnviado) {
+          toast.warning(`Pago registrado, pero la notificación al administrador no pudo enviarse (${d?.emailAdminError ?? "error SMTP"}). Contáctalo directamente.`);
         }
         startTransition(() => router.push("/propietario/dashboard"));
         return "Pago informado correctamente. El administrador revisará tu comprobante en 24-48 hrs.";

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { generarEstadoCuenta, generarEstadosCuentaMasivo, generarEstadosCuentaMasivoSinNotificacion, sincronizarEstadosEC, eliminarEstadoCuenta } from "./actions";
+import { getResultData } from "@/lib/server-action-utils";
 import { formatCLP, formatDate } from "@/lib/utils";
 import { FileText, RefreshCw, Layers, Download, CheckCheck, BellOff, Trash2 } from "lucide-react";
 
@@ -53,7 +54,8 @@ export function EstadosCuentaClient({ periodoActual, estadosCuenta, parcelasSinE
       success: (res) => {
         if (res.error) throw new Error(res.error);
         startTransition(() => router.refresh());
-        const n = res.actualizados ?? 0;
+        const d = getResultData<{ actualizados?: number }>(res);
+        const n = d?.actualizados ?? 0;
         return n > 0
           ? `${n} estado${n !== 1 ? "s" : ""} de cuenta marcado${n !== 1 ? "s" : ""} como Pagado`
           : "Todo ya estaba sincronizado";
@@ -68,10 +70,11 @@ export function EstadosCuentaClient({ periodoActual, estadosCuenta, parcelasSinE
       success: (res) => {
         if (res.error) throw new Error(res.error);
         startTransition(() => router.refresh());
-        const errMsg = res.errores && res.errores.length > 0
-          ? ` (${res.errores.length} errores)`
+        const d = getResultData<{ ok?: number; errores?: string[] }>(res);
+        const errMsg = d?.errores && d.errores.length > 0
+          ? ` (${d.errores.length} errores)`
           : "";
-        return `${res.ok} estados de cuenta generados${errMsg}`;
+        return `${d?.ok ?? 0} estados de cuenta generados${errMsg}`;
       },
       error: (e) => e.message || "Error al generar",
     });
@@ -84,13 +87,14 @@ export function EstadosCuentaClient({ periodoActual, estadosCuenta, parcelasSinE
       success: (res) => {
         if (res.error) throw new Error(res.error);
         startTransition(() => router.refresh());
-        const omitidos = res.omitidos && res.omitidos.length > 0
-          ? ` (${res.omitidos.length} ya existían)`
+        const d = getResultData<{ ok?: number; omitidos?: string[]; errores?: string[] }>(res);
+        const omitidos = d?.omitidos && d.omitidos.length > 0
+          ? ` (${d.omitidos.length} ya existían)`
           : "";
-        const errores = res.errores && res.errores.length > 0
-          ? `, ${res.errores.length} errores`
+        const errores = d?.errores && d.errores.length > 0
+          ? `, ${d.errores.length} errores`
           : "";
-        return `${res.ok} estados de cuenta creados${omitidos}${errores}`;
+        return `${d?.ok ?? 0} estados de cuenta creados${omitidos}${errores}`;
       },
       error: (e) => e.message || "Error al generar",
     });
@@ -100,7 +104,7 @@ export function EstadosCuentaClient({ periodoActual, estadosCuenta, parcelasSinE
     setGenerandoId(parcelaId);
     const result = await generarEstadoCuenta(parcelaId, periodo);
     setGenerandoId(null);
-    if (result.error) {
+    if (!result.success) {
       toast.error(`Error en ${parcelaNumero}: ${result.error}`);
       return;
     }
@@ -119,7 +123,7 @@ export function EstadosCuentaClient({ periodoActual, estadosCuenta, parcelasSinE
     setEliminandoId(ec.id);
     const result = await eliminarEstadoCuenta(ec.id);
     setEliminandoId(null);
-    if (result.error) {
+    if (!result.success) {
       toast.error(result.error);
       return;
     }

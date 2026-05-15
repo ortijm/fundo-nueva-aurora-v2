@@ -86,7 +86,7 @@ export function ConsumosClient({
 
     const result = await guardarLectura(fd);
     setSavingId(null);
-    if (result.error) { toast.error(result.error); return; }
+    if (!result.success) { toast.error(result.error); return; }
 
     toast.success("Lectura guardada");
     setLecturas((prev) => { const next = { ...prev }; delete next[parcelaId]; return next; });
@@ -151,11 +151,12 @@ export function ConsumosClient({
 
     toast.promise(importarExcelConsumos(data), {
       loading: `Importando ${data.length} lecturas...`,
-      success: (res) => {
-        if (res.error) throw new Error(res.error);
+      success: (res: Record<string, unknown>) => {
+        if (res.error) throw new Error(res.error as string);
         startTransition(() => router.refresh());
-        const errMsg = res.errores?.length ? ` (${res.errores.length} errores: ${res.errores.slice(0, 2).join(", ")})` : "";
-        return `${res.ok} lecturas importadas correctamente${errMsg}`;
+        const d = res as unknown as { ok: number; errores: string[] };
+        const errMsg = d.errores?.length ? ` (${d.errores.length} errores: ${d.errores.slice(0, 2).join(", ")})` : "";
+        return `${d.ok} lecturas importadas correctamente${errMsg}`;
       },
       error: "Error al importar",
     });
@@ -210,7 +211,7 @@ export function ConsumosClient({
 
       const result = await guardarLectura(fd);
       setSavingId(null);
-      if (result.error) { toast.error(result.error); return; }
+      if (!result.success) { toast.error(result.error); return; }
 
       toast.success("Lectura guardada");
       setLecturas((prev) => { const next = { ...prev }; delete next[key]; return next; });
