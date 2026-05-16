@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -14,43 +14,44 @@ export default function LoginForm() {
     setLoading(true);
 
     const form = new FormData(e.currentTarget);
-    const username = form.get("username") as string;
+    const email = form.get("email") as string;
     const password = form.get("password") as string;
 
-    const result = await signIn("credentials", {
-      username,
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
       password,
-      redirect: false,
     });
 
-    if (result?.error) {
+    if (error) {
       toast.error("Credenciales incorrectas. Intente nuevamente.");
       setLoading(false);
       return;
     }
 
     router.push("/");
+    router.refresh();
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label
-          htmlFor="username"
+          htmlFor="email"
           className="block text-sm font-medium mb-1.5"
           style={{ color: "var(--on-surface-muted)" }}
         >
-          Usuario
+          Email
         </label>
         <input
-          id="username"
-          name="username"
-          type="text"
+          id="email"
+          name="email"
+          type="email"
           required
-          autoComplete="username"
+          autoComplete="email"
           className="w-full px-3.5 py-2.5 text-sm rounded-lg focus:outline-none"
           style={{ background: "var(--surface-low)", color: "var(--on-surface)" }}
-          placeholder="Tu nombre de usuario"
+          placeholder="tu@email.com"
         />
       </div>
 

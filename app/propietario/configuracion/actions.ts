@@ -2,8 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import bcrypt from "bcryptjs";
-import { signOut } from "next-auth/react";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 import { withErrorHandling, unauthorized } from "@/lib/server-action-utils";
 
@@ -22,23 +22,30 @@ export async function changePassword(currentPassword: string, newPassword: strin
   }
 
   return withErrorHandling(async () => {
-    const user = await prisma.usuario.findUnique({
+    // Verificar contraseña actual contra Supabase Auth
+    const supabase = await createClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: session.user.email ?? "",
+      password: parsed.data.currentPassword,
+    });
+    if (signInError) {
+      return { success: false, error: "La contraseña actual es incorrecta" };
+    }
+
+    // Actualizar password en Supabase Auth
+    const admin = createAdminClient();
+    const usuario = await prisma.usuario.findUnique({
       where: { id: session.user.id },
+      select: { supabaseId: true },
     });
 
-    if (!user) return { success: false, error: "Usuario no encontrado" };
-
-    if (!user.password) return { success: false, error: "El usuario no tiene contraseña configurada" };
-
-    const passwordMatch = await bcrypt.compare(parsed.data.currentPassword, user.password);
-    if (!passwordMatch) return { success: false, error: "La contraseña actual es incorrecta" };
-
-    const hashedPassword = await bcrypt.hash(parsed.data.newPassword, 12);
-
-    await prisma.usuario.update({
-      where: { id: user.id },
-      data: { password: hashedPassword },
-    });
+    if (usuario?.supabaseId) {
+      const { error: updateError } = await admin.auth.admin.updateUserById(
+        usuario.supabaseId,
+        { password: parsed.data.newPassword }
+      );
+      if (updateError) throw new Error(updateError.message);
+    }
 
     return { success: true };
   }, "changePassword");

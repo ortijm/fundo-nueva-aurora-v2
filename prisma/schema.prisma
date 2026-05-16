@@ -68,10 +68,11 @@ enum Rol {
 
 model Usuario {
   id            String    @id @default(cuid())
+  supabaseId    String?   @unique
   username      String    @unique
   email         String?
   emailVerified DateTime?
-  password      String?
+  password      String?   // Solo para usuarios legacy, Supabase Auth maneja el hash
   firstName     String    @default("")
   lastName      String    @default("")
   rol           Rol       @default(PROPIETARIO)

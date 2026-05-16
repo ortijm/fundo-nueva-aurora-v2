@@ -1,7 +1,30 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { createClient } from "@supabase/supabase-js";
 
 const prisma = new PrismaClient();
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false } }
+);
+
+async function createAuthUser(email: string, password: string, metadata: Record<string, string>) {
+  const { data, error } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: metadata,
+  });
+  if (error) {
+    // Si el usuario ya existe en Auth, buscarlo
+    const { data: existing } = await supabase.auth.admin.listUsers();
+    const found = existing?.users.find((u) => u.email === email);
+    if (found) return found;
+    throw error;
+  }
+  return data.user;
+}
 
 async function main() {
   console.log("🌱 Iniciando seed de base de datos...");
@@ -44,38 +67,42 @@ async function main() {
     });
   }
 
-  // Usuario administrador
-  const adminPassword = await bcrypt.hash("admin123", 12);
+  // Usuario administrador — crear en Supabase Auth y en BD
+  console.log("  Creando usuario admin en Supabase Auth...");
+  const adminAuth = await createAuthUser("admin@nuevaaurora.cl", "admin123", { rol: "ADMINISTRADOR", username: "admin" });
+
   const admin = await prisma.usuario.upsert({
     where: { username: "admin" },
     create: {
+      supabaseId: adminAuth.id,
       username: "admin",
       email: "admin@nuevaaurora.cl",
-      password: adminPassword,
       firstName: "Administrador",
       lastName: "Sistema",
       rol: "ADMINISTRADOR",
       cargo: "Administrador del Condominio",
       isActive: true,
     },
-    update: {},
+    update: { supabaseId: adminAuth.id },
   });
 
   // Usuario propietario de ejemplo
-  const propPassword = await bcrypt.hash("prop123", 12);
+  console.log("  Creando usuario propietario en Supabase Auth...");
+  const propAuth = await createAuthUser("propietario@ejemplo.cl", "prop123", { rol: "PROPIETARIO", username: "propietario" });
+
   const propietario = await prisma.usuario.upsert({
     where: { username: "propietario" },
     create: {
+      supabaseId: propAuth.id,
       username: "propietario",
       email: "propietario@ejemplo.cl",
-      password: propPassword,
       firstName: "Juan",
       lastName: "Pérez",
       rol: "PROPIETARIO",
       telefono: "+56912345678",
       isActive: true,
     },
-    update: {},
+    update: { supabaseId: propAuth.id },
   });
 
   // Parcela de ejemplo
@@ -116,9 +143,9 @@ async function main() {
   });
 
   console.log("✅ Seed completado exitosamente.");
-  console.log("\n📋 Credenciales:");
-  console.log("   Administrador: admin / admin123");
-  console.log("   Propietario:   propietario / prop123");
+  console.log("\n📋 Credenciales (login con EMAIL):");
+  console.log("   Administrador: admin@nuevaaurora.cl / admin123");
+  console.log("   Propietario:   propietario@ejemplo.cl / prop123");
 }
 
 main()

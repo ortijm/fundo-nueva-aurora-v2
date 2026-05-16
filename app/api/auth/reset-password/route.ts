@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,11 +52,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const supabase = createAdminClient();
 
+    // Actualizar password en Supabase Auth
+    if (user.supabaseId) {
+      const { error: authError } = await supabase.auth.admin.updateUserById(user.supabaseId, { password });
+      if (authError) {
+        console.error("Reset password auth error:", authError);
+      }
+    }
+
+    // También actualizar en BD local
     await prisma.usuario.update({
       where: { id: user.id },
-      data: { password: hashedPassword },
+      data: { supabaseId: user.supabaseId || undefined },
     });
 
     await prisma.verificationToken.delete({

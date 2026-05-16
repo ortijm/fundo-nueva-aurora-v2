@@ -3,8 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { withErrorHandling, unauthorized } from "@/lib/server-action-utils";
 
 const crearParcelaSchema = z.object({
@@ -100,7 +100,7 @@ const crearPropietarioSchema = z.object({
   username: z.string().min(1, "El nombre de usuario es requerido"),
   firstName: z.string().optional().default(""),
   lastName: z.string().optional().default(""),
-  email: z.string().email("Email inválido").optional().nullable(),
+  email: z.string().email("Email inválido"),
   telefono: z.string().optional().default(""),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
 });
@@ -113,7 +113,7 @@ export async function crearPropietario(formData: FormData) {
     username: (formData.get("username") as string)?.trim() || "",
     firstName: (formData.get("firstName") as string)?.trim() || "",
     lastName: (formData.get("lastName") as string)?.trim() || "",
-    email: (formData.get("email") as string)?.trim() || null,
+    email: (formData.get("email") as string)?.trim() || "",
     telefono: (formData.get("telefono") as string)?.trim() || "",
     password: formData.get("password") as string || "",
   };
@@ -133,15 +133,26 @@ export async function crearPropietario(formData: FormData) {
   }
 
   return withErrorHandling(async () => {
-    const hashed = await bcrypt.hash(parsed.data.password, 10);
+    // Crear en Supabase Auth
+    const supabase = createAdminClient();
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: parsed.data.email,
+      password: parsed.data.password,
+      email_confirm: true,
+      user_metadata: { rol: "PROPIETARIO", username: parsed.data.username },
+    });
+
+    if (authError) throw new Error(authError.message);
+
+    // Crear en la BD local
     const user = await prisma.usuario.create({
       data: {
+        supabaseId: authData.user.id,
         username: parsed.data.username,
         firstName: parsed.data.firstName,
         lastName: parsed.data.lastName,
         email: parsed.data.email,
         telefono: parsed.data.telefono,
-        password: hashed,
         rol: "PROPIETARIO",
       },
     });
@@ -178,15 +189,31 @@ export async function editarPropietario(userId: string, formData: FormData) {
   }
 
   return withErrorHandling(async () => {
+    const supabase = createAdminClient();
     const data: Record<string, unknown> = {
       firstName: parsed.data.firstName,
       lastName: parsed.data.lastName,
       email: parsed.data.email,
       telefono: parsed.data.telefono,
     };
-    if (parsed.data.password) {
-      data.password = await bcrypt.hash(parsed.data.password, 10);
+
+    // Buscar supabaseId del usuario
+    const usuario = await prisma.usuario.findUnique({ where: { id: userId }, select: { supabaseId: true, email: true } });
+
+    if (usuario?.supabaseId) {
+      // Actualizar email en Supabase Auth si cambió
+      if (parsed.data.email && parsed.data.email !== usuario.email) {
+        const { error: emailError } = await supabase.auth.admin.updateUserById(usuario.supabaseId, { email: parsed.data.email });
+        if (emailError) throw new Error(emailError.message);
+      }
+
+      // Actualizar password en Supabase Auth
+      if (parsed.data.password) {
+        const { error: passError } = await supabase.auth.admin.updateUserById(usuario.supabaseId, { password: parsed.data.password });
+        if (passError) throw new Error(passError.message);
+      }
     }
+
     await prisma.usuario.update({ where: { id: userId }, data });
     revalidatePath("/admin/propiedades");
     return { success: true };
@@ -207,6 +234,15 @@ export async function desactivarPropietario(userId: string) {
   }
 
   return withErrorHandling(async () => {
+    const usuario = await prisma.usuario.findUnique({ where: { id: userId }, select: { supabaseId: true } });
+
+    // Desactivar en Supabase Auth
+    if (usuario?.supabaseId) {
+      const supabase = createAdminClient();
+      const { error } = await supabase.auth.admin.updateUserById(usuario.supabaseId, { ban_duration: "876600h" }); // 100 años
+      if (error) throw new Error(error.message);
+    }
+
     await prisma.usuario.update({ where: { id: userId }, data: { isActive: false } });
     revalidatePath("/admin/propiedades");
     return { success: true };
