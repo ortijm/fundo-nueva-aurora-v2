@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
 
       const { renderToBuffer } = await import("@react-pdf/renderer");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const buffer = await renderToBuffer(createElement(EstadoCuentaPDF, { data } as any));
+      const buffer = await renderToBuffer(createElement(EstadoCuentaPDF, { data }) as any);
       fs.writeFileSync(pdfPath, buffer);
 
       await prisma.estadoCuenta.update({
