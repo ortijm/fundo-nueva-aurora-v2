@@ -232,7 +232,8 @@ async function main() {
 
       // Generar PDF
       const { renderToBuffer } = await import("@react-pdf/renderer");
-      const buffer = await renderToBuffer(createElement(EstadoCuentaPDF, { data } as React.Attributes));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const buffer = await renderToBuffer(createElement(EstadoCuentaPDF, { data } as any));
 
       // Guardar PDF
       fs.writeFileSync(pdfPath, buffer);
