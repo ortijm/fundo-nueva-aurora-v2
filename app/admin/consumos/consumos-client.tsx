@@ -56,7 +56,7 @@ export function ConsumosClient({
   progreso,
 }: Props) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const startTransition = useTransition()[1];
   const [lecturas, setLecturas] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [periodo, setPeriodo] = useState(periodoActual);

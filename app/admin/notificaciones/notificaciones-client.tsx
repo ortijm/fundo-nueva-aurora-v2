@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { getResultData } from "@/lib/server-action-utils";
 import { enviarComunicadoAction } from "./actions";
 import { formatDate } from "@/lib/utils";
-import { Bell, Plus, Send, Check, AlertCircle, Clock } from "lucide-react";
+import { Plus, Send, Check, AlertCircle, Clock } from "lucide-react";
 
 interface NotificacionRow {
   id: string;

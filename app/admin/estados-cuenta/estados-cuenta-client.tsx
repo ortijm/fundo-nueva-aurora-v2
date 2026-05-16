@@ -41,7 +41,7 @@ export function EstadosCuentaClient({ periodoActual, estadosCuenta, parcelasSinE
   const [periodo, setPeriodo] = useState(periodoActual);
   const [generandoId, setGenerandoId] = useState<string | null>(null);
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
-  const [ecAEliminar, setEcAEliminar] = useState<EstadoCuentaRow | null>(null);
+  // const [ecAEliminar, setEcAEliminar] = useState<EstadoCuentaRow | null>(null);
 
   function handlePeriodoChange(val: string) {
     setPeriodo(val);

@@ -17,7 +17,6 @@ interface ConsumoItem {
 
 export function InformarPagoForm({
   consumosPendientes,
-  totalPendiente,
 }: {
   consumosPendientes: ConsumoItem[];
   totalPendiente: number;
