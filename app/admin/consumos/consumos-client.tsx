@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/static-components */
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";

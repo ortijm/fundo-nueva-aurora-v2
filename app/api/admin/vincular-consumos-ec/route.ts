@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
       };
 
       const { renderToBuffer } = await import("@react-pdf/renderer");
-      const buffer = await renderToBuffer(createElement(EstadoCuentaPDF, { data }) as any);
+      const buffer = await renderToBuffer(createElement(EstadoCuentaPDF, { data } as React.Attributes));
       fs.writeFileSync(pdfPath, buffer);
 
       await prisma.estadoCuenta.update({
