@@ -57,7 +57,7 @@ Endureció la seguridad del sistema y mejoró la calidad del código: rate limit
 - **Build exitoso — 26 rutas compiladas, TypeScript OK**
 
 ## Next Recommended
-Continue with **Fase 2 — Emails (Resend)**:
-- Reemplazar Nodemailer/SMTP por Resend
-- Opcional: React Email para templates
-- Eliminar variables SMTP del .env
+Continue with **Fase 2 — Brevo SMTP**:
+- ✅ Configurado: SMTP de Brevo en .env (reemplaza Gmail personal)
+- ✅ Sender verificado: fundonuevaauroraspa@gmail.com
+- Opcional: migrar a @react-pdf/renderer templates
