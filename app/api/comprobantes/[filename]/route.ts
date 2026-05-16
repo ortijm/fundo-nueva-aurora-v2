@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile } from "fs/promises";
-import path from "path";
-import { existsSync } from "fs";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 export async function GET(
   request: NextRequest,
@@ -14,30 +13,13 @@ export async function GET(
       return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
     }
 
-    const filePath = path.join("/tmp", "uploads", "comprobantes", filename);
-
-    if (!existsSync(filePath)) {
-      return NextResponse.json({ error: "File not found" }, { status: 404 });
+    // Redirigir al archivo en Supabase Storage
+    if (SUPABASE_URL) {
+      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/comprobantes/${filename}`;
+      return NextResponse.redirect(publicUrl);
     }
 
-    const fileBuffer = await readFile(filePath);
-    const ext = filename.split(".").pop()?.toLowerCase();
-
-    const mimeTypes: Record<string, string> = {
-      jpg: "image/jpeg",
-      jpeg: "image/jpeg",
-      png: "image/png",
-      pdf: "application/pdf",
-    };
-
-    const contentType = mimeTypes[ext || ""] || "application/octet-stream";
-
-    return new NextResponse(fileBuffer, {
-      headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=31536000, immutable",
-      },
-    });
+    return NextResponse.json({ error: "Storage not configured" }, { status: 500 });
   } catch (error) {
     console.error("Error serving comprobante:", error);
     return NextResponse.json({ error: "Error reading file" }, { status: 500 });

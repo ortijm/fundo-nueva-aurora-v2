@@ -3,8 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { put } from "@vercel/blob";
 import { z } from "zod";
+import { uploadComprobante } from "@/lib/supabase/storage";
 import { withErrorHandling, unauthorized } from "@/lib/server-action-utils";
 
 const informarPagoAdminSchema = z.object({
@@ -52,22 +52,9 @@ export async function informarPagoAdmin(formData: FormData) {
     const ext = comprobante.name.split(".").pop() || "jpg";
     const filename = `pago_${parcela.numero}_${Date.now()}.${ext}`;
 
-    let comprobanteUrl: string;
-
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      const blob = await put(filename, comprobante, {
-        access: "public",
-      });
-      comprobanteUrl = blob.url;
-    } else {
-      const { writeFile, mkdir } = await import("fs/promises");
-      const path = await import("path");
-      const uploadDir = path.join(process.cwd(), "public", "uploads", "comprobantes");
-      await mkdir(uploadDir, { recursive: true });
-      const buffer = Buffer.from(await comprobante.arrayBuffer());
-      await writeFile(path.join(uploadDir, filename), buffer);
-      comprobanteUrl = `/uploads/comprobantes/${filename}`;
-    }
+    const uploaded = await uploadComprobante(filename, comprobante, comprobante.type);
+    if (uploaded.error) throw new Error(uploaded.error);
+    const comprobanteUrl = uploaded.url;
 
     const { monto, concepto, fechaOperacion } = parsed.data;
     const consumoIds = formData.getAll("consumos[]") as string[];
