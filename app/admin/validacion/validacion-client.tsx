@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { aprobarPago, rechazarPago } from "./actions";
@@ -170,11 +171,11 @@ export function ValidacionClient({
                 className="block w-full h-40 rounded-xl overflow-hidden mb-4"
                 style={{ background: "var(--surface-low)" }}
               >
-                <img
+                <Image
                   src={pagoSeleccionado.comprobante}
                   alt="Comprobante"
-                  className="w-full h-full object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  fill
+                  className="object-cover"
                 />
               </a>
             ) : (

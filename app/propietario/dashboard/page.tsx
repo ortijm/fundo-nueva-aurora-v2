@@ -4,8 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { formatCLP, formatPeriodo, formatPeriodoCorto, toDecimal } from "@/lib/utils";
 import { ConsumoCharts } from "./consumo-charts";
 import { redirect } from "next/navigation";
-import { startOfMonth, subMonths, format } from "date-fns";
-import { es } from "date-fns/locale";
+import { startOfMonth, subMonths } from "date-fns";
 import { AlertTriangle, Download } from "lucide-react";
 
 export const metadata: Metadata = { title: "Mi Dashboard" };
@@ -24,7 +23,6 @@ async function getPropietarioData(userId: string) {
   const tiposConsumo = await prisma.tipoConsumo.findMany({ where: { activo: true } });
   const tipoAgua = tiposConsumo.find((t) => t.nombre.toLowerCase() === "agua");
   const tipoLuz = tiposConsumo.find((t) => t.nombre.toLowerCase() === "luz");
-  const tipoGc = tiposConsumo.find((t) => t.nombre.toLowerCase().includes("gasto"));
 
   const consumos5meses = await prisma.consumoMensual.findMany({
     where: {

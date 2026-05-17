@@ -27,12 +27,18 @@ context: |
   - Decimal handling para valores monetarios
 
 testing:
-  runner: none
-  strict_tdd: false
-  coverage_threshold: 0
-  test_command: ""
+  runner: vitest
+  version: "4.1.6"
+  strict_tdd: true
+  coverage_tool: "@vitest/coverage-v8"
+  coverage_includes:
+    - "lib/services/"
+    - "lib/ratelimit.ts"
+    - "lib/utils.ts"
+  test_command: "npm run test"
+  test_files: 5
   build_command: "npm run build"
-  reason: "No test runner configured. Project lacks test infrastructure (no Vitest, Jest, or test scripts)."
+  reason: "Vitest configured with coverage. Tests located in tests/ directory."
 
 lint:
   tool: eslint
@@ -77,7 +83,7 @@ rules:
     - Follow existing code patterns from CLAUDE.md
     - Use Server Actions for mutations
     - Handle Decimal types properly
-    tdd: false
+    tdd: true
   verify:
     - Run npm run build to verify compilation
     - Test manually for UI changes

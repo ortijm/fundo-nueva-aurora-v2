@@ -12,7 +12,6 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  HelpCircle,
   Home,
   CreditCard,
   FileText,

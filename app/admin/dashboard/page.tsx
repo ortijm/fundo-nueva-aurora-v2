@@ -5,9 +5,7 @@ import { formatCLP, toDecimal } from "@/lib/utils";
 import { DashboardCharts } from "./dashboard-charts";
 import { PagosPendientesTable } from "./pagos-pendientes-table";
 import {
-  Users,
   AlertTriangle,
-  CheckCircle2,
   TrendingUp,
 } from "lucide-react";
 import { subMonths, startOfMonth } from "date-fns";

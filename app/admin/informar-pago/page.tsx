@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { InformarPagoAdminForm } from "./informar-pago-form";
 import { getConfig } from "@/lib/services/config";
-import { toDecimal } from "@/lib/utils";
+
 
 export const metadata: Metadata = { title: "Informar Pago - Administrador" };
 

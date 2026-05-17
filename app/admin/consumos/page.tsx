@@ -50,7 +50,6 @@ export default async function ConsumosPage({
   ]);
 
   // Progreso: considera solo tipos variables (lecturas reales)
-  const tiposVariables = tiposConsumo.filter((t) => t.esVariable);
   const totalParcelas = parcelasData.length;
 
   let conLectura: number;

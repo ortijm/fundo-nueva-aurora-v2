@@ -1,9 +1,9 @@
 import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { formatCLP, formatPeriodo, toDecimal } from "@/lib/utils";
+import { formatCLP, toDecimal } from "@/lib/utils";
 import { IngresosEgresosChart, DeudaPieChart } from "./reportes-charts";
 import { subMonths, startOfMonth } from "date-fns";
-import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Droplets, Zap, Home } from "lucide-react";
+import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 export const metadata: Metadata = { title: "Reportes" };
 

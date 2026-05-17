@@ -71,7 +71,7 @@ async function main() {
   console.log("  Creando usuario admin en Supabase Auth...");
   const adminAuth = await createAuthUser("admin@nuevaaurora.cl", "admin123", { rol: "ADMINISTRADOR", username: "admin" });
 
-  const admin = await prisma.usuario.upsert({
+  await prisma.usuario.upsert({
     where: { username: "admin" },
     create: {
       supabaseId: adminAuth.id,

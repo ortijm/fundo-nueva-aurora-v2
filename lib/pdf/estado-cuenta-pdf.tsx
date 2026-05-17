@@ -4,7 +4,6 @@ import {
   Text,
   View,
   StyleSheet,
-  Font,
 } from "@react-pdf/renderer";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────
@@ -307,7 +306,6 @@ const s = StyleSheet.create({
 
 export function EstadoCuentaPDF({ data }: { data: EstadoCuentaData }) {
   const consumosPorTipo = agruparPorTipo(data.consumos);
-  const totalPeriodo = data.subtotalAgua + data.subtotalLuz + data.subtotalGc;
 
   return (
     <Document title={`Estado de Cuenta ${data.parcelaNumero} ${data.periodoLabel}`}>

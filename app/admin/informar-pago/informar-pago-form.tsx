@@ -54,7 +54,7 @@ export function InformarPagoAdminForm({ parcelas }: { parcelas: ParcelaOption[] 
         setConsumosPendientes(data.consumos);
         setSeleccionados(data.consumos.map((c: ConsumoItem) => c.id));
       }
-    } catch (error) {
+    } catch {
       toast.error("Error al cargar consumos");
     } finally {
       setLoadingConsumos(false);
