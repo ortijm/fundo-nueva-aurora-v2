@@ -41,8 +41,11 @@ export async function informarPago(formData: FormData) {
   if (comprobante.size > 5 * 1024 * 1024) return { success: false, error: "El comprobante supera el límite de 5 MB" };
 
   return withErrorHandling(async () => {
+    const parcelaId = formData.get("parcelaId") as string;
+    if (!parcelaId) throw new Error("Parcela no seleccionada");
+
     const parcela = await prisma.parcela.findFirst({
-      where: { propietarioId: session.user.id, estado: "ACTIVA" },
+      where: { id: parcelaId, propietarioId: session.user.id, estado: "ACTIVA" },
     });
     if (!parcela) throw new Error("No tienes parcela asignada");
 

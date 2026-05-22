@@ -1,13 +1,32 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with code in this repository.
 
 ## Project Overview
 
-Next.js 15 + TypeScript condominium management system for "Condominio Nueva Aurora". Full-stack monorepo replacing a Django/MySQL system. Spanish-speaking user base.
+Next.js 16.2.1 + TypeScript condominium management system for "Condominio Nueva Aurora". Spanish-speaking user base. Migrated from a Django/MySQL system.
 
 **Roles:** ADMINISTRADOR, PROPIETARIO  
 **Modules:** Dashboard, Consumos (agua/luz/GC), Gastos, Validación de Pagos, Propiedades, Estados de Cuenta, Configuración
+
+## Stack
+
+| Category | Technology |
+|----------|-----------|
+| Framework | Next.js 16.2.1 (App Router) |
+| Language | TypeScript 5 |
+| Database | PostgreSQL via Supabase |
+| ORM | Prisma 5 |
+| Auth | Supabase Auth (email/password) |
+| Storage | Supabase Storage (bucket: `comprobantes`) |
+| UI | Tailwind CSS v4, shadcn/ui (Radix primitives), Lucide icons |
+| Forms | react-hook-form + zod |
+| Charts | Recharts |
+| PDF | @react-pdf/renderer (billing PDFs) |
+| Email | SMTP via Brevo (Nodemailer) |
+| Testing | Vitest v4 (strict TDD mode) |
+| Linting | ESLint 9 (eslint-config-next) |
+| Excel | xlsx (meter reading imports) |
 
 ## Setup & Commands
 
@@ -16,62 +35,120 @@ Next.js 15 + TypeScript condominium management system for "Condominio Nueva Auro
 ./setup.sh               # One-command setup
 
 npm run dev              # Development server at http://localhost:3000
-npm run build            # Production build
-npm run db:push          # Sync schema to DB
-npm run db:seed          # Seed initial data
+npm run build            # Production build (generates Prisma client + pushes schema)
+npm run dev -- --turbo   # Turbopack for faster dev iteration
+npm run lint             # ESLint
+npm run test             # Vitest (run once)
+npm run test:watch       # Vitest (watch mode)
+npm run test:coverage    # Vitest with coverage report
+npm run db:push          # Sync Prisma schema to DB (safe for dev)
+npm run db:migrate       # Create a new Prisma migration
+npm run db:seed          # Seed initial data (admin / admin123 | propietario / prop123)
 npm run db:studio        # Prisma Studio GUI
-npx prisma generate      # Regenerate client after schema changes
 ```
-
-Default credentials (after seed): admin / admin123 | propietario / prop123
 
 ## Architecture
 
 ```
 app/
-├── admin/           # ADMINISTRADOR role routes
-│   ├── dashboard/   # KPIs, charts, pending payments
-│   ├── consumos/    # Meter readings + Excel import
-│   ├── gastos/      # Expenses + Gastos Comunes generation
-│   ├── validacion/  # Payment voucher approval
-│   ├── propiedades/ # Property + owner management
-│   └── configuracion/ # Rates, bank data
-├── propietario/     # PROPIETARIO role routes
-│   ├── dashboard/   # Debt, charts, history
-│   ├── informar-pago/ # Submit payment voucher
+├── admin/              # ADMINISTRADOR role routes
+│   ├── dashboard/      # KPIs, charts, pending payments
+│   ├── consumos/       # Meter readings + Excel import
+│   ├── gastos/         # Expenses + Gastos Comunes generation
+│   ├── validacion/     # Payment voucher approval
+│   ├── propiedades/    # Property + owner management
+│   └── configuracion/  # Rates, bank data
+├── propietario/        # PROPIETARIO role routes
+│   ├── dashboard/      # Debt, charts, history
+│   ├── informar-pago/  # Submit payment voucher
 │   └── estados-cuenta/ # Billing history + PDF download
-├── login/           # Auth
-└── api/auth/        # NextAuth v5
+├── login/              # Auth (Supabase email/password)
+├── forgot-password/    # Password recovery
+├── reset-password/     # Password reset (via magic link)
+└── api/
+    ├── auth/           # Supabase Auth server helpers (forgot/reset)
+    ├── comprobantes/   # Serve payment voucher images from Supabase Storage
+    ├── consumos-pendientes/ # Quick API for billing data
+    └── ec/             # Estado de Cuenta PDF generation
 
 lib/
-├── auth.ts          # NextAuth (Credentials + bcrypt + JWT)
-├── prisma.ts        # Prisma singleton
-├── utils.ts         # formatCLP, formatDate, toDecimal
+├── auth.ts             # Supabase session helper (replaces old NextAuth)
+├── prisma.ts           # Prisma singleton
+├── utils.ts            # formatCLP, formatDate, toDecimal
+├── ratelimit.ts        # Rate limiting (in-memory sliding window)
+├── server-action-utils.ts # withErrorHandling(), unauthorized() helpers
+└── supabase/
+│   ├── server.ts       # Supabase server client (App Router / Server Components)
+│   ├── client.ts       # Supabase browser client (Client Components)
+│   ├── middleware.ts    # Supabase session refresh (edge middleware helper)
+│   ├── admin.ts        # Supabase admin client (service_role key — server-only)
+│   └── storage.ts      # uploadComprobante() helper
 └── services/
-    ├── config.ts    # getConfig() singleton
-    ├── consumos.ts  # calcularConsumo(), actualizarDeudasParcela()
-    └── email.ts     # Resend notifications
+    ├── config.ts       # getConfig() singleton
+    ├── consumos.ts     # calcularConsumo(), actualizarDeudasParcela()
+    └── email.ts        # Nodemailer via Brevo SMTP
+
+tests/
+├── services/
+│   ├── ratelimit.test.ts
+│   └── consumos.test.ts
+├── actions/
+│   └── validacion.test.ts
+└── utils.test.ts
 ```
 
 ## Key Patterns
 
-**Server Actions** for all mutations:
+**Server Actions** for all mutations (wrapped with `withErrorHandling`):
 ```typescript
 "use server";
+import { auth, getCurrentUser } from "@/lib/auth";
+import { withErrorHandling, unauthorized } from "@/lib/server-action-utils";
+import { revalidatePath } from "next/cache";
+
 export async function myAction(formData: FormData) {
-  const session = await auth();
-  if (!session || session.user.rol !== "ADMINISTRADOR") return { error: "No autorizado" };
-  // ...
-  revalidatePath("/admin/something");
-  return { success: true };
+  return withErrorHandling(async () => {
+    const user = await getCurrentUser();
+    if (!user || user.rol !== "ADMINISTRADOR") throw unauthorized();
+
+    // ... business logic
+
+    revalidatePath("/admin/something");
+    return { success: true };
+  }, "myAction");
 }
 ```
 
-Always convert `Decimal` to `Number` before passing to Client Components: use `toDecimal()` or `Number()`.
+**Auth check** (always server-side):
+```typescript
+import { auth, getCurrentUser } from "@/lib/auth";
+
+// Full session:
+const session = await auth();
+
+// Just user + rol (for Server Actions):
+const user = await getCurrentUser();
+if (!user) return { error: "No autorizado" };
+```
+
+**Supabase Admin client** (for storage uploads, user management):
+```typescript
+import { createAdminClient } from "@/lib/supabase/admin";
+const supabase = createAdminClient();
+```
+
+**Money handling**: Always convert `Decimal` to `Number` before passing to Client Components: use `toDecimal()` or `Number()`.
+
+**Rate limiting** for sensitive actions:
+```typescript
+import { checkRateLimit } from "@/lib/ratelimit";
+const { ok, retryAfter } = checkRateLimit(userId);
+if (!ok) return { error: `Demasiadas solicitudes. Espere ${retryAfter}s.` };
+```
 
 ## Business Logic
 
-- **Agua:** 30m³ franchise (configurable). Excess charged at `costoAguaM3Adicional`/m³.
+- **Agua:** 30m³ franchise (configurable via `getConfig()`). Excess charged at `costoAguaM3Adicional`/m³.
 - **Luz:** Per-kWh at `costoLuzKwh`.
 - **Gasto Común:** `montoGcNuevo` for new owners, `montoGcConHistorial` for established ones.
 - **Payments:** PENDIENTE → APROBADO | RECHAZADO. Approval marks consumos PAGADO + registers FondoCondominio entry.
@@ -90,9 +167,23 @@ Always convert `Decimal` to `Number` before passing to Client Components: use `t
 
 ## Environment Variables
 
-```
-DATABASE_URL="mysql://user:pass@localhost:3306/nueva_aurora_db"
-AUTH_SECRET="random-32-chars"
-RESEND_API_KEY="re_..."   # Optional
-EMAIL_FROM="Nueva Aurora <noreply@domain.cl>"
+```env
+# Database (Supabase PostgreSQL)
+DATABASE_URL="postgresql://postgres.REFERENCIA:password@pooler.supabase.com:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres.REFERENCIA:password@pooler.supabase.com:5432/postgres"
+
+# Supabase Auth + Storage
+NEXT_PUBLIC_SUPABASE_URL="https://REFERENCIA.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="anon_key_de_supabase_settings_api"
+SUPABASE_SERVICE_ROLE_KEY="service_role_key_de_supabase_settings_api"
+
+# SMTP (Brevo)
+SMTP_HOST="smtp-relay.brevo.com"
+SMTP_PORT="587"
+SMTP_USER="tu_smtp_login@smtp-brevo.com"
+SMTP_PASS="tu_smtp_key"
+EMAIL_FROM="Nueva Aurora <noreply@dominio.cl>"
+
+# App
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```

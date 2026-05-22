@@ -6,12 +6,13 @@ import { ConsumoCharts } from "./consumo-charts";
 import { redirect } from "next/navigation";
 import { startOfMonth, subMonths } from "date-fns";
 import { AlertTriangle, Download } from "lucide-react";
+import { ParcelaSelector } from "@/app/propietario/_components/parcela-selector";
 
 export const metadata: Metadata = { title: "Mi Dashboard" };
 
-async function getPropietarioData(userId: string) {
-  const parcela = await prisma.parcela.findFirst({
-    where: { propietarioId: userId, estado: "ACTIVA" },
+async function getPropietarioData(parcelaId: string) {
+  const parcela = await prisma.parcela.findUnique({
+    where: { id: parcelaId },
     include: { propietario: true },
   });
 
@@ -26,7 +27,7 @@ async function getPropietarioData(userId: string) {
 
   const consumos5meses = await prisma.consumoMensual.findMany({
     where: {
-      parcelaId: parcela.id,
+      parcelaId,
       periodo: { gte: meses5[0] },
     },
     include: { tipoConsumo: true },
@@ -81,14 +82,14 @@ async function getPropietarioData(userId: string) {
 
   // Historial de pagos
   const pagos = await prisma.pago.findMany({
-    where: { parcelaId: parcela.id },
+    where: { parcelaId },
     orderBy: { creado: "desc" },
     take: 10,
   });
 
   // Estados de cuenta
   const estadosCuenta = await prisma.estadoCuenta.findMany({
-    where: { parcelaId: parcela.id },
+    where: { parcelaId },
     orderBy: { periodo: "desc" },
     take: 6,
   });
@@ -131,13 +132,23 @@ async function getPropietarioData(userId: string) {
   };
 }
 
-export default async function PropietarioDashboardPage() {
+export default async function PropietarioDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ parcela?: string }>;
+}) {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const data = await getPropietarioData(session.user.id);
+  const resolvedSearchParams = await searchParams;
 
-  if (!data) {
+  // Obtener TODAS las parcelas del propietario
+  const parcelas = await prisma.parcela.findMany({
+    where: { propietarioId: session.user.id, estado: "ACTIVA" },
+    select: { id: true, numero: true, nombre: true },
+  });
+
+  if (parcelas.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
         <AlertTriangle size={40} style={{ color: "var(--on-surface-muted)" }} />
@@ -151,7 +162,29 @@ export default async function PropietarioDashboardPage() {
     );
   }
 
+  // Determinar parcela seleccionada
+  const selectedParcelaId = resolvedSearchParams.parcela && parcelas.some(p => p.id === resolvedSearchParams.parcela)
+    ? resolvedSearchParams.parcela
+    : parcelas[0].id;
+
+  const data = await getPropietarioData(selectedParcelaId);
+
+  if (!data) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+        <AlertTriangle size={40} style={{ color: "var(--on-surface-muted)" }} />
+        <h2 className="text-xl font-bold font-display mt-4" style={{ color: "var(--on-surface)" }}>
+          Parcela no encontrada
+        </h2>
+        <p className="text-sm mt-2" style={{ color: "var(--on-surface-muted)" }}>
+          La parcela seleccionada no está disponible.
+        </p>
+      </div>
+    );
+  }
+
   const nombre = session.user.name?.split(" ")[0] || "Propietario";
+  const parcelaParam = `?parcela=${selectedParcelaId}`;
 
   const estadoPagoChip = (estado: string) => {
     if (estado === "APROBADO") return <span className="chip-confirmed">Pagado</span>;
@@ -164,9 +197,12 @@ export default async function PropietarioDashboardPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold font-display" style={{ color: "var(--on-surface)" }}>
-          Hola, {nombre} 👋
-        </h1>
+        <div className="flex items-center gap-4 flex-wrap">
+          <h1 className="text-3xl font-bold font-display" style={{ color: "var(--on-surface)" }}>
+            Hola, {nombre} 👋
+          </h1>
+          <ParcelaSelector parcelas={parcelas} />
+        </div>
         <p className="text-sm mt-1" style={{ color: "var(--on-surface-muted)" }}>
           Parcela {data.parcela.numero}
           {data.parcela.nombre && ` — ${data.parcela.nombre}`}
@@ -208,14 +244,14 @@ export default async function PropietarioDashboardPage() {
           )}
           <div className="mt-5 space-y-2">
             <a
-              href="/propietario/informar-pago"
+              href={`/propietario/informar-pago${parcelaParam}`}
               className="block text-center py-2.5 rounded-xl text-sm font-semibold bg-white"
               style={{ color: "var(--primary)" }}
             >
               Informar Pago
             </a>
             <a
-              href="/propietario/estados-cuenta"
+              href={`/propietario/estados-cuenta${parcelaParam}`}
               className="block text-center py-2.5 rounded-xl text-sm font-semibold border border-white/30"
               style={{ color: "white" }}
             >
@@ -289,7 +325,7 @@ export default async function PropietarioDashboardPage() {
             <h2 className="text-base font-semibold font-display" style={{ color: "var(--on-surface)" }}>
               Historial de Últimos Cobros
             </h2>
-            <a href="/propietario/estados-cuenta" className="text-xs" style={{ color: "var(--primary)" }}>
+            <a href={`/propietario/estados-cuenta${parcelaParam}`} className="text-xs" style={{ color: "var(--primary)" }}>
               Ver todo el historial
             </a>
           </div>

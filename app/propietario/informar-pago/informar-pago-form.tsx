@@ -16,11 +16,14 @@ interface ConsumoItem {
 }
 
 export function InformarPagoForm({
+  parcelaId,
   consumosPendientes,
 }: {
+  parcelaId: string;
   consumosPendientes: ConsumoItem[];
   totalPendiente: number;
 }) {
+  const cancelUrl = `/propietario/dashboard?parcela=${parcelaId}`;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [seleccionados, setSeleccionados] = useState<string[]>(
@@ -145,6 +148,7 @@ export function InformarPagoForm({
             </span>
           </div>
           <input type="hidden" name="monto" value={totalSeleccionado || ""} />
+          <input type="hidden" name="parcelaId" value={parcelaId} />
         </div>
       ) : (
         <div className="card-surface p-5">
@@ -240,7 +244,7 @@ export function InformarPagoForm({
       </button>
 
       <a
-        href="/propietario/dashboard"
+        href={cancelUrl}
         className="block text-center text-sm py-2"
         style={{ color: "var(--on-surface-muted)" }}
       >

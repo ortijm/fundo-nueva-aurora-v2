@@ -362,21 +362,14 @@ export function PropiedadesClient({
                 <select name="propietarioId" defaultValue={editandoParcela?.propietarioId || ""} className="w-full px-3 py-2.5 text-sm rounded-lg" style={{ background: "var(--surface-low)", color: "var(--on-surface)" }}>
                   <option value="">Sin asignar</option>
                   {usuarios
-                    .filter(u => {
-                      if (!u.isActive) return false;
-                      const tieneActiva = u.parcelas.some((p: ParcelaInfo) => p.estado === "ACTIVA");
-                      if (!tieneActiva) return true;
-                      return editandoParcela?.propietarioId === u.id;
-                    })
-                    .map((u) => (
-                      <option key={u.id} value={u.id}>{u.nombre}</option>
-                    ))}
+                    .filter(u => u.isActive)
+                    .map((u) => {
+                      const parcelasStr = u.parcelas.length > 0 ? ` — ${u.parcelas.map(p => p.numero).join(", ")}` : "";
+                      return (
+                        <option key={u.id} value={u.id}>{u.nombre}{parcelasStr}</option>
+                      );
+                    })}
                 </select>
-                {usuarios.filter((u: UsuarioItem) => u.isActive && !u.parcelas.some((p: ParcelaInfo) => p.estado === "ACTIVA")).length === 0 && (
-                  <p className="text-xs mt-1" style={{ color: "var(--on-surface-muted)" }}>
-                    No hay propietarios disponibles. Todos tienen parcela asignada o están inactivos.
-                  </p>
-                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

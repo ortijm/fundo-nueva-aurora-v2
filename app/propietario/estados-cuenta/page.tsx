@@ -4,18 +4,26 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { formatCLP, formatPeriodo, formatDate, toDecimal } from "@/lib/utils";
 import { Download } from "lucide-react";
+import { ParcelaSelector } from "@/app/propietario/_components/parcela-selector";
 
 export const metadata: Metadata = { title: "Estados de Cuenta" };
 
-export default async function EstadosCuentaPage() {
+export default async function EstadosCuentaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ parcela?: string }>;
+}) {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const parcela = await prisma.parcela.findFirst({
+  const resolvedSearchParams = await searchParams;
+
+  const parcelas = await prisma.parcela.findMany({
     where: { propietarioId: session.user.id, estado: "ACTIVA" },
+    select: { id: true, numero: true, nombre: true },
   });
 
-  if (!parcela) {
+  if (parcelas.length === 0) {
     return (
       <div className="text-center py-16">
         <p style={{ color: "var(--on-surface-muted)" }}>No tienes parcela asignada.</p>
@@ -23,8 +31,14 @@ export default async function EstadosCuentaPage() {
     );
   }
 
+  const selectedParcelaId = resolvedSearchParams.parcela && parcelas.some(p => p.id === resolvedSearchParams.parcela)
+    ? resolvedSearchParams.parcela
+    : parcelas[0].id;
+
+  const selectedParcela = parcelas.find(p => p.id === selectedParcelaId)!;
+
   const estadosCuenta = await prisma.estadoCuenta.findMany({
-    where: { parcelaId: parcela.id },
+    where: { parcelaId: selectedParcelaId },
     include: {
       consumos: { include: { tipoConsumo: true } },
     },
@@ -41,11 +55,15 @@ export default async function EstadosCuentaPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold font-display" style={{ color: "var(--on-surface)" }}>
-          Estados de Cuenta
-        </h1>
+        <div className="flex items-center gap-4 flex-wrap">
+          <h1 className="text-3xl font-bold font-display" style={{ color: "var(--on-surface)" }}>
+            Estados de Cuenta
+          </h1>
+          <ParcelaSelector parcelas={parcelas} />
+        </div>
         <p className="text-sm mt-1" style={{ color: "var(--on-surface-muted)" }}>
-          Parcela {parcela.numero} — Historial completo de cobros.
+          Parcela {selectedParcela.numero} — Historial completo de cobros.
+          {selectedParcela.nombre && ` (${selectedParcela.nombre})`}
         </p>
       </div>
 

@@ -5,18 +5,26 @@ import { redirect } from "next/navigation";
 import { InformarPagoForm } from "./informar-pago-form";
 import { getConfig } from "@/lib/services/config";
 import { toDecimal } from "@/lib/utils";
+import { ParcelaSelector } from "@/app/propietario/_components/parcela-selector";
 
 export const metadata: Metadata = { title: "Informar Pago" };
 
-export default async function InformarPagoPage() {
+export default async function InformarPagoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ parcela?: string }>;
+}) {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const parcela = await prisma.parcela.findFirst({
+  const resolvedSearchParams = await searchParams;
+
+  const parcelas = await prisma.parcela.findMany({
     where: { propietarioId: session.user.id, estado: "ACTIVA" },
+    select: { id: true, numero: true, nombre: true },
   });
 
-  if (!parcela) {
+  if (parcelas.length === 0) {
     return (
       <div className="text-center py-16">
         <p style={{ color: "var(--on-surface-muted)" }}>No tienes parcela asignada.</p>
@@ -24,11 +32,17 @@ export default async function InformarPagoPage() {
     );
   }
 
+  const selectedParcelaId = resolvedSearchParams.parcela && parcelas.some(p => p.id === resolvedSearchParams.parcela)
+    ? resolvedSearchParams.parcela
+    : parcelas[0].id;
+
+  const selectedParcela = parcelas.find(p => p.id === selectedParcelaId)!;
+
   const [config, consumosPendientes] = await Promise.all([
     getConfig(),
     prisma.consumoMensual.findMany({
       where: {
-        parcelaId: parcela.id,
+        parcelaId: selectedParcelaId,
         estado: { in: ["CON_ESTADO_CUENTA"] },
         totalAPagar: { gt: 0 },
       },
@@ -45,11 +59,14 @@ export default async function InformarPagoPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold font-display" style={{ color: "var(--on-surface)" }}>
-          Informar Pago
-        </h1>
+        <div className="flex items-center gap-4 flex-wrap">
+          <h1 className="text-3xl font-bold font-display" style={{ color: "var(--on-surface)" }}>
+            Informar Pago
+          </h1>
+          <ParcelaSelector parcelas={parcelas} />
+        </div>
         <p className="text-sm mt-1" style={{ color: "var(--on-surface-muted)" }}>
-          Completa los datos de la transferencia para validar el pago de tus obligaciones.
+          Parcela {selectedParcela.numero} — completa los datos para validar tu pago.
         </p>
       </div>
 
@@ -57,6 +74,7 @@ export default async function InformarPagoPage() {
         {/* Formulario */}
         <div className="lg:col-span-3">
           <InformarPagoForm
+            parcelaId={selectedParcelaId}
             consumosPendientes={consumosPendientes.map((c) => ({
               id: c.id,
               tipo: c.tipoConsumo.nombre,

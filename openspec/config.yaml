@@ -10,8 +10,8 @@ project:
   roles: ADMINISTRADOR, PROPIETARIO
   language: es
 
-context: |
-  Tech stack: Next.js 16.2.1, TypeScript 5, Prisma 5.22 (PostgreSQL), NextAuth v5 (Credentials + JWT), bcryptjs, zod, react-hook-form
+  context: |
+    Tech stack: Next.js 16.2.1, TypeScript 5, Prisma 5.22 (PostgreSQL), Supabase Auth (email/password), zod, react-hook-form
   UI: Tailwind CSS v4, shadcn/ui (Radix primitives), Lucide icons, Sonner toasts
   Email: Resend + Nodemailer for notifications
   PDF: @react-pdf/renderer for billing PDFs
@@ -22,9 +22,10 @@ context: |
   Architecture:
   - Server Actions para todas las mutaciones
   - Prisma singleton pattern
-  - NextAuth v5 con JWT y Credentials provider
+  - Supabase Auth con email/password, sesión via cookies
   - Componentes de servidor por defecto, client components solo donde necesario
   - Decimal handling para valores monetarios
+  - Rate limiting en acciones sensibles
 
 testing:
   runner: vitest
@@ -93,7 +94,7 @@ rules:
 conventions:
   - Server Actions: "use server" + auth check pattern
   - Components: server-first, client only when needed
-  - Auth: NextAuth v5 with JWT strategy, Credentials provider
+  - Auth: Supabase Auth with email/password, session via cookies; server-side helper via lib/auth.ts
   - Forms: react-hook-form + zod validation
   - Database: Prisma with Decimal for money, avoid float
   - Design: No borders, use surface color shifts
