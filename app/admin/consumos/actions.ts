@@ -105,13 +105,9 @@ export async function generarGastosComunes(formData: FormData) {
 
     let creados = 0;
     for (const parcela of parcelas) {
-      const tieneHistorial = await prisma.consumoMensual.count({
-        where: { parcelaId: parcela.id, tipoConsumoId: { not: tipoGc.id } },
-      });
-
-      const monto = tieneHistorial > 0
-        ? Number(config.montoGcConHistorial)
-        : Number(config.montoGcNuevo);
+      const monto = parcela.tipoGc === "REDUCIDO"
+        ? Number(config.montoGcNuevo)
+        : Number(config.montoGcConHistorial);
 
       try {
         await prisma.consumoMensual.upsert({

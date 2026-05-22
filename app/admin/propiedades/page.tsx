@@ -65,6 +65,7 @@ export default async function PropiedadesPage({
           sector: p.sector,
           superficieM2: p.superficieM2 ? Number(p.superficieM2) : null,
           estado: p.estado,
+          tipoGc: p.tipoGc,
           deudaTotal: Number(p.deudaTotal),
           deudaAgua: Number(p.deudaAgua),
           deudaLuz: Number(p.deudaLuz),

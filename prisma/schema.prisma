@@ -136,9 +136,15 @@ enum EstadoParcela {
   INACTIVA
 }
 
+enum TipoGastoComun {
+  NORMAL
+  REDUCIDO
+}
+
 model Parcela {
   id                String        @id @default(cuid())
   numero            String        @unique
+  tipoGc            TipoGastoComun @default(NORMAL)
   nombre            String        @default("")
   propietarioId     String?
   superficieM2      Decimal?      @db.Decimal(10, 2)
