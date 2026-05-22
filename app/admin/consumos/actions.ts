@@ -126,7 +126,10 @@ export async function generarGastosComunes(formData: FormData) {
             totalAPagar: monto,
             registradoPorId: session.user.id,
           },
-          update: {},
+          update: {
+            montoConsumo: monto,
+            totalAPagar: monto,
+          },
         });
         await actualizarDeudasParcela(parcela.id);
         creados++;
