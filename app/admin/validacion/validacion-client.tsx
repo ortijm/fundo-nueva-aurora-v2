@@ -165,17 +165,19 @@ export function ValidacionClient({
 
             {pagoSeleccionado.comprobante ? (
               <a
+                key={pagoSeleccionado.id}
                 href={pagoSeleccionado.comprobante}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block w-full h-40 rounded-xl overflow-hidden mb-4"
-                style={{ background: "var(--surface-low)" }}
+                style={{ background: "var(--surface-low)", position: "relative" }}
               >
                 <Image
                   src={pagoSeleccionado.comprobante}
                   alt="Comprobante"
                   fill
                   className="object-cover"
+                  sizes="320px"
                 />
               </a>
             ) : (
