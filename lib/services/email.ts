@@ -89,6 +89,11 @@ export async function enviarNotificacionEstadoCuenta(ecId: string): Promise<{ en
 
         ${config.mensajePieEc ? `<p style="color: #42484d; font-size: 13px; border-top: 1px solid #e8ecef; padding-top: 16px;">${config.mensajePieEc}</p>` : ""}
         <p style="color: #8a9299; font-size: 12px; margin-top: 16px;">${config.nombreCondominio} · ${config.direccion}</p>
+        <p style="text-align: center; margin-top: 20px;">
+          <a href="https://fundo-nueva-aurora-v2.vercel.app" style="color: #17335a; font-size: 13px; font-weight: 600; text-decoration: none;">
+            Ingresar a la plataforma →
+          </a>
+        </p>
       </div>
     </div>
   `;
