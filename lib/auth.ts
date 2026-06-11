@@ -15,7 +15,7 @@ export interface Session {
 
 /**
  * Obtiene la sesión actual usando Supabase Auth.
- * Reemplaza el antiguo auth() de NextAuth.
+ * Si Prisma/DB no está disponible, usa los user_metadata de Supabase como fallback.
  */
 export async function auth(): Promise<Session | null> {
   try {
@@ -26,36 +26,66 @@ export async function auth(): Promise<Session | null> {
 
     if (!user) return null;
 
-    // Buscar usuario en BD por supabaseId o email
-    const dbUser = user.id
-      ? await prisma.usuario.findFirst({
-          where: {
-            OR: [
-              { supabaseId: user.id },
-              { email: user.email ?? undefined },
-            ],
-          },
-          select: {
-            id: true,
-            username: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            rol: true,
-            isActive: true,
-          },
-        })
-      : null;
+    // Intentar buscar usuario en BD por supabaseId o email
+    let dbUser: {
+      id: string;
+      username: string;
+      email: string | null;
+      firstName: string;
+      lastName: string;
+      rol: "ADMINISTRADOR" | "PROPIETARIO";
+      isActive: boolean;
+    } | null = null;
+
+    try {
+      dbUser = user.id
+        ? await prisma.usuario.findFirst({
+            where: {
+              OR: [
+                { supabaseId: user.id },
+                { email: user.email ?? undefined },
+              ],
+            },
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              rol: true,
+              isActive: true,
+            },
+          })
+        : null;
+    } catch {
+      // DB no disponible — usar fallback con metadata de Supabase
+      const meta = user.user_metadata || {};
+      const rol = (meta.rol as "ADMINISTRADOR" | "PROPIETARIO") || "PROPIETARIO";
+      return {
+        user: {
+          id: user.id,
+          name: meta.firstName
+            ? `${meta.firstName} ${meta.lastName || ""}`.trim()
+            : user.email?.split("@")[0] || "Usuario",
+          email: user.email ?? null,
+          username: meta.username || user.email?.split("@")[0] || "usuario",
+          rol,
+        },
+      };
+    }
 
     if (!dbUser || !dbUser.isActive) return null;
 
     // Vincular supabaseId si no estaba seteado
     if (!dbUser.id.includes("-")) {
-      // Es un cuid, no un UUID de Supabase — actualizar
-      await prisma.usuario.update({
-        where: { id: dbUser.id },
-        data: { supabaseId: user.id },
-      });
+      try {
+        await prisma.usuario.update({
+          where: { id: dbUser.id },
+          data: { supabaseId: user.id },
+        });
+      } catch {
+        // Ignorar si la DB no está disponible
+      }
     }
 
     return {
