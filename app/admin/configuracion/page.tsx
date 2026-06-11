@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Metadata } from "next";
 import { getConfig } from "@/lib/services/config";
 import { ConfiguracionForm } from "./configuracion-form";
