@@ -12,6 +12,24 @@ export default async function GastosPage() {
     take: 12,
   });
 
+  // Para cada período, verificar si tiene ECs con pagos aprobados
+  const periodosConEstado = await Promise.all(
+    periodos.map(async (p) => {
+      const ecsPagados = await prisma.estadoCuenta.count({
+        where: {
+          periodo: p.periodo,
+          estado: "PAGADO",
+        },
+      });
+      return {
+        id: p.id,
+        periodo: p.periodo.toISOString(),
+        descripcion: p.descripcion,
+        tienePagados: ecsPagados > 0,
+      };
+    })
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -23,13 +41,7 @@ export default async function GastosPage() {
         </p>
       </div>
 
-      <GastosClient
-        periodos={periodos.map((p) => ({
-          id: p.id,
-          periodo: p.periodo.toISOString(),
-          descripcion: p.descripcion,
-        }))}
-      />
+      <GastosClient periodos={periodosConEstado} />
     </div>
   );
 }

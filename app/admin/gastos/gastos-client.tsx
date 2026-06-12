@@ -8,7 +8,7 @@ import { getResultData } from "@/lib/server-action-utils";
 import { generarGastosComunes, eliminarGastosComunes, previewEliminarGastosComunes } from "./actions";
 import { formatPeriodo } from "@/lib/utils";
 
-interface PeriodoItem { id: string; periodo: string; descripcion: string; }
+interface PeriodoItem { id: string; periodo: string; descripcion: string; tienePagados: boolean; }
 
 interface PreviewData {
   tienePagados: boolean;
@@ -125,11 +125,11 @@ export function GastosClient({ periodos }: { periodos: PeriodoItem[] }) {
                 </span>
                 <button
                   onClick={() => handlePreviewDelete(p)}
-                  disabled={isPending || isDeleting}
-                  className="p-1.5 rounded-lg transition-colors hover:bg-red-500/10 disabled:opacity-40"
-                  title="Eliminar gastos comunes de este período"
+                  disabled={isPending || isDeleting || p.tienePagados}
+                  className={`p-1.5 rounded-lg transition-colors disabled:opacity-40 ${p.tienePagados ? "cursor-not-allowed" : "hover:bg-red-500/10"}`}
+                  title={p.tienePagados ? "No se puede eliminar: tiene estados de cuenta pagados" : "Eliminar gastos comunes de este período"}
                 >
-                  <Trash2 size={14} className="text-red-400" />
+                  <Trash2 size={14} className={p.tienePagados ? "text-gray-400" : "text-red-400"} />
                 </button>
               </div>
             ))}
