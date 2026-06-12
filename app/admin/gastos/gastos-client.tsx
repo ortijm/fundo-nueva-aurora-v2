@@ -151,35 +151,34 @@ export function GastosClient({ periodos }: { periodos: PeriodoItem[] }) {
             </div>
 
             <p className="text-sm mb-4" style={{ color: "var(--on-surface-muted)" }}>
-              Al eliminar los gastos comunes del período{" "}
-              <strong style={{ color: "var(--on-surface)" }}>{formatPeriodo(deleteTarget.periodo)}</strong>,
-              se realizará lo siguiente:
+              Se eliminarán <strong style={{ color: "var(--on-surface)" }}>todos los consumos de Gasto Común</strong> del período{" "}
+              <strong style={{ color: "var(--on-surface)" }}>{formatPeriodo(deleteTarget.periodo)}</strong> y los Estados de Cuenta asociados:
             </p>
 
             <ul className="text-sm space-y-2 mb-4 pl-4" style={{ color: "var(--on-surface-muted)" }}>
               <li className="flex items-start gap-2">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                Se eliminarán los <strong style={{ color: "var(--on-surface)" }}>consumos de gastos comunes</strong> de todas las parcelas para este período.
+                Se eliminarán <strong style={{ color: "var(--on-surface)" }}>todos los consumos de GC</strong> de las parcelas para este período.
               </li>
               {preview && preview.totalEcs > 0 && (
                 <li className="flex items-start gap-2">
                   <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                  Se eliminarán <strong style={{ color: "var(--on-surface)" }}>{preview.pendientes} Estado(s) de Cuenta</strong> PENDIENTES asociados.
+                  Se eliminarán <strong style={{ color: "var(--on-surface)" }}>{preview.totalEcs} Estados de Cuenta</strong> del período ({preview.pendientes} pendientes).
                 </li>
               )}
               <li className="flex items-start gap-2">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                Deberá <strong style={{ color: "var(--on-surface)" }}>generar nuevamente</strong> los gastos comunes y estados de cuenta si desea mantenerlos.
+                <span>Si desea mantener los EC, deberá <strong style={{ color: "var(--on-surface)" }}>generar nuevamente</strong> los gastos comunes y estados de cuenta.</span>
               </li>
             </ul>
 
             {preview?.tienePagados && (
               <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-4">
                 <p className="text-sm font-semibold text-red-400">
-                  No se puede eliminar: {preview.pagados} EC(s) ya están PAGADOS.
+                  No se puede eliminar: {preview.pagados} EC(s) ya están como PAGADO.
                 </p>
                 <p className="text-xs mt-1" style={{ color: "var(--on-surface-muted)" }}>
-                  Parcelas: {preview.parcelasPagadas.join(", ")}
+                  Parcelas con pagos aprobados: {preview.parcelasPagadas.join(", ")}
                 </p>
               </div>
             )}
