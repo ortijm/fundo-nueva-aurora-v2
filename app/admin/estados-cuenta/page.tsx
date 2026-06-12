@@ -4,6 +4,7 @@ import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { EstadosCuentaClient } from "./estados-cuenta-client";
 import { format, startOfMonth } from "date-fns";
+import { formatPeriodo } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Estados de Cuenta" };
 
@@ -48,6 +49,9 @@ export default async function EstadosCuentaPage({
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--on-surface-muted)" }}>
           Genera y envía los estados de cuenta mensuales a los propietarios.
+        </p>
+        <p className="text-xs mt-2" style={{ color: "var(--on-surface-muted)" }}>
+          Período de cobro: <strong>{formatPeriodo(periodo)}</strong>.
         </p>
       </div>
 

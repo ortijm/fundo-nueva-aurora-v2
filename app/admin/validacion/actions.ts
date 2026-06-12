@@ -85,7 +85,9 @@ export async function aprobarPago(pagoId: string) {
     try {
       const { enviarNotificacionPagoAprobado } = await import("@/lib/services/email");
       await enviarNotificacionPagoAprobado(pagoId);
-    } catch {}
+    } catch (e) {
+      console.error("[aprobacion] Error enviando notificación:", e);
+    }
 
     revalidatePath("/admin/validacion");
     revalidatePath("/admin/dashboard");
@@ -134,7 +136,9 @@ export async function rechazarPago(pagoId: string, motivo: string) {
     try {
       const { enviarNotificacionPagoRechazado } = await import("@/lib/services/email");
       await enviarNotificacionPagoRechazado(pagoId, motivo);
-    } catch {}
+    } catch (e) {
+      console.error("[rechazo] Error enviando notificación:", e);
+    }
 
     revalidatePath("/admin/validacion");
     return { success: true };

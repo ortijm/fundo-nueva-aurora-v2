@@ -183,8 +183,11 @@ async function main() {
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
       ];
-      const dt = new Date(ec.periodo);
-      const periodoLabel = `${meses[dt.getMonth()]} ${dt.getFullYear()}`;
+      // Parse ISO directly to avoid UTC timezone mismatch
+      const isoScript = ec.periodo.toISOString();
+      const periodoYearScript = parseInt(isoScript.slice(0, 4), 10);
+      const periodoMonthScript = parseInt(isoScript.slice(5, 7), 10) - 1;
+      const periodoLabel = `${meses[periodoMonthScript]} ${periodoYearScript}`;
 
       const propietario = parcela.propietario;
       const propietarioNombre = propietario

@@ -83,7 +83,7 @@ async function getDashboardData() {
       const inicio = startOfMonth(mes);
       const fin = startOfMonth(subMonths(mes, -1));
       const agg = await prisma.pago.aggregate({
-        where: { estado: "APROBADO", fechaAprobacion: { gte: inicio, lt: fin } },
+        where: { estado: "APROBADO", fechaOperacion: { gte: inicio, lt: fin } },
         _sum: { monto: true },
       });
       return {

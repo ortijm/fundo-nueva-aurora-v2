@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { uploadComprobante } from "@/lib/supabase/storage";
 import { withErrorHandling, unauthorized } from "@/lib/server-action-utils";
+import { actualizarDeudasParcela } from "@/lib/services/consumos";
+import crypto from "crypto";
 
 const informarPagoAdminSchema = z.object({
   parcelaId: z.string().min(1, "Debes seleccionar una parcela"),
@@ -49,8 +51,11 @@ export async function informarPagoAdmin(formData: FormData) {
     });
     if (!parcela) throw new Error("Parcela no encontrada o inactiva");
 
-    const ext = comprobante.name.split(".").pop() || "jpg";
-    const filename = `pago_${parcela.numero}_${Date.now()}.${ext}`;
+    // Use server-generated UUID to prevent path traversal and extension spoofing
+    const allowedExts = ["jpg", "jpeg", "png", "gif", "webp", "pdf"];
+    const rawExt = comprobante.name.split(".").pop()?.toLowerCase() || "";
+    const ext = allowedExts.includes(rawExt) ? rawExt : "jpg";
+    const filename = `pago_${parcela.numero}_${crypto.randomUUID()}.${ext}`;
 
     const uploaded = await uploadComprobante(filename, comprobante, comprobante.type);
     if (uploaded.error) throw new Error(uploaded.error);
@@ -131,35 +136,4 @@ export async function informarPagoAdmin(formData: FormData) {
 
     return { pagoId: pago.id };
   }, "informarPagoAdmin");
-}
-
-async function actualizarDeudasParcela(parcelaId: string) {
-  const consumos = await prisma.consumoMensual.findMany({
-    where: { parcelaId },
-    include: { tipoConsumo: true },
-  });
-
-  let deudaAgua = 0;
-  let deudaLuz = 0;
-  let deudaGc = 0;
-
-  for (const c of consumos) {
-    if (c.estado !== "PAGADO" && Number(c.totalAPagar) > 0) {
-      if (c.tipoConsumo.nombre === "Agua") deudaAgua += Number(c.totalAPagar);
-      else if (c.tipoConsumo.nombre === "Luz") deudaLuz += Number(c.totalAPagar);
-      else if (c.tipoConsumo.nombre === "Gasto Común") deudaGc += Number(c.totalAPagar);
-    }
-  }
-
-  const deudaTotal = deudaAgua + deudaLuz + deudaGc;
-
-  await prisma.parcela.update({
-    where: { id: parcelaId },
-    data: {
-      deudaAgua,
-      deudaLuz,
-      deudaGc,
-      deudaTotal,
-    },
-  });
 }

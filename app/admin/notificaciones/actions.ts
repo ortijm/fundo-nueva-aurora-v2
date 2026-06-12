@@ -3,23 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { getConfig } from "@/lib/services/config";
-import nodemailer from "nodemailer";
 import { z } from "zod";
 import { withErrorHandling, unauthorized } from "@/lib/server-action-utils";
-
-function createTransport() {
-  const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT || "587");
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS?.replace(/\s/g, "");
-  if (!host || !user || !pass) return null;
-  return nodemailer.createTransport({
-    host, port,
-    secure: port === 465,
-    auth: { user, pass },
-    tls: { rejectUnauthorized: false },
-  });
-}
+import { createTransport, escapeHtml } from "@/lib/smtp";
 
 async function enviarComunicadoEmail(
   to: string,
@@ -40,10 +26,10 @@ async function enviarComunicadoEmail(
         <p style="color: #b0c4de; font-size: 13px; margin: 6px 0 0;">Comunicado</p>
       </div>
       <div style="background: #f7fafc; border: 1px solid #e8ecef; border-top: none; border-radius: 0 0 12px 12px; padding: 24px;">
-        <p style="margin: 0 0 16px;">Estimado/a <strong>${nombreDestinatario}</strong>,</p>
+        <p style="margin: 0 0 16px;">Estimado/a <strong>${escapeHtml(nombreDestinatario)}</strong>,</p>
         <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; border: 1px solid #e8ecef;">
-          <h2 style="font-size: 16px; color: #17335a; margin: 0 0 12px;">${asunto}</h2>
-          <p style="color: #42484d; font-size: 14px; white-space: pre-wrap; margin: 0;">${mensaje}</p>
+          <h2 style="font-size: 16px; color: #17335a; margin: 0 0 12px;">${escapeHtml(asunto)}</h2>
+          <p style="color: #42484d; font-size: 14px; white-space: pre-wrap; margin: 0;">${escapeHtml(mensaje)}</p>
         </div>
         <p style="color: #8a9299; font-size: 12px; margin-top: 16px;">${nombreCondominio}</p>
       </div>

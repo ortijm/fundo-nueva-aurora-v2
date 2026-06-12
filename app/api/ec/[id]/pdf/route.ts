@@ -45,8 +45,11 @@ export async function GET(
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
   ];
-  const dt = new Date(ec.periodo);
-  const periodoLabel = `${meses[dt.getMonth()]} ${dt.getFullYear()}`;
+  // Parse ISO directly to avoid UTC timezone mismatch
+  const iso = ec.periodo.toISOString();
+  const periodoYear = parseInt(iso.slice(0, 4), 10);
+  const periodoMonth = parseInt(iso.slice(5, 7), 10) - 1;
+  const periodoLabel = `${meses[periodoMonth]} ${periodoYear}`;
 
   const data: EstadoCuentaData = {
     id: ec.id,
@@ -88,7 +91,7 @@ export async function GET(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buffer: Buffer = await renderToBuffer(createElement(EstadoCuentaPDF, { data }) as any);
 
-  const filename = `EstadoCuenta_${ec.parcela.numero}_${dt.getFullYear()}${String(dt.getMonth() + 1).padStart(2, "0")}.pdf`;
+  const filename = `EstadoCuenta_${ec.parcela.numero}_${periodoYear}${String(periodoMonth + 1).padStart(2, "0")}.pdf`;
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {

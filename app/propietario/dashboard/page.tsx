@@ -36,14 +36,15 @@ async function getPropietarioData(parcelaId: string) {
     orderBy: { periodo: "asc" },
   });
 
-  // Armar data para gráficos
+  // Armar data para gráficos — compare via ISO string to avoid UTC/local timezone mismatch
   const chartData = meses5.map((mes) => {
     const label = formatPeriodoCorto(mes);
+    const mesIso = mes.toISOString().slice(0, 7); // "2026-04"
     const agua = consumos5meses.find(
-      (c) => c.tipoConsumoId === tipoAgua?.id && c.periodo.getMonth() === mes.getMonth() && c.periodo.getFullYear() === mes.getFullYear()
+      (c) => c.tipoConsumoId === tipoAgua?.id && c.periodo.toISOString().slice(0, 7) === mesIso
     );
     const luz = consumos5meses.find(
-      (c) => c.tipoConsumoId === tipoLuz?.id && c.periodo.getMonth() === mes.getMonth() && c.periodo.getFullYear() === mes.getFullYear()
+      (c) => c.tipoConsumoId === tipoLuz?.id && c.periodo.toISOString().slice(0, 7) === mesIso
     );
     return {
       mes: label,

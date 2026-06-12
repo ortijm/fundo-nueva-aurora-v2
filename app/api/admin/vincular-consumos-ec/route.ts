@@ -124,8 +124,11 @@ export async function POST(req: NextRequest) {
     try {
       const pdfFilename = `EstadoCuenta_${parcela.numero}_${periodoStr}.pdf`;
       const pdfPath = path.join(pdfDir, pdfFilename);
-      const dt = new Date(ec.periodo);
-      const periodoLabel = `${meses[dt.getMonth()]} ${dt.getFullYear()}`;
+      // Parse ISO directly to avoid UTC timezone mismatch
+      const isoEc = ec.periodo.toISOString();
+      const periodoYearEc = parseInt(isoEc.slice(0, 4), 10);
+      const periodoMonthEc = parseInt(isoEc.slice(5, 7), 10) - 1;
+      const periodoLabel = `${meses[periodoMonthEc]} ${periodoYearEc}`;
 
       const propietario = parcela.propietario;
       const propietarioNombre = propietario

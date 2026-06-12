@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      const resetUrl = `${appUrl}/reset-password?token=${resetToken}&userId=${user.id}`;
+      const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
       const emailResult = await sendPasswordResetEmail(user.email, resetUrl);
 
       if (emailResult.ok) {

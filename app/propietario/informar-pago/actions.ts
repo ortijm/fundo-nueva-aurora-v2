@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { uploadComprobante } from "@/lib/supabase/storage";
 import { withErrorHandling, unauthorized } from "@/lib/server-action-utils";
+import crypto from "crypto";
 
 const informarPagoSchema = z.object({
   monto: z.number().positive("El monto debe ser mayor a 0"),
@@ -49,8 +50,11 @@ export async function informarPago(formData: FormData) {
     });
     if (!parcela) throw new Error("No tienes parcela asignada");
 
-    const ext = comprobante.name.split(".").pop() || "jpg";
-    const filename = `pago_${parcela.numero}_${Date.now()}.${ext}`;
+    // Use server-generated UUID to prevent path traversal and extension spoofing
+    const allowedExts = ["jpg", "jpeg", "png", "gif", "webp", "pdf"];
+    const rawExt = comprobante.name.split(".").pop()?.toLowerCase() || "";
+    const ext = allowedExts.includes(rawExt) ? rawExt : "jpg";
+    const filename = `pago_${parcela.numero}_${crypto.randomUUID()}.${ext}`;
 
     const uploaded = await uploadComprobante(filename, comprobante, comprobante.type);
     if (uploaded.error) throw new Error(uploaded.error);

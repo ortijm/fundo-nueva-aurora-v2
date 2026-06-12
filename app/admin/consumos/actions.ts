@@ -133,7 +133,9 @@ export async function generarGastosComunes(formData: FormData) {
         });
         await actualizarDeudasParcela(parcela.id);
         creados++;
-      } catch {}
+      } catch (e) {
+        console.error(`[consumos] Error creando consumo para parcela ${parcela.numero}:`, e);
+      }
     }
 
     await prisma.periodoGasto.upsert({

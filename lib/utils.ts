@@ -27,7 +27,11 @@ export function formatDate(date: Date | string | null | undefined): string {
 
 export function formatPeriodo(date: Date | string | null | undefined): string {
   if (!date) return "—";
-  const d = typeof date === "string" ? new Date(date) : date;
+  const iso = typeof date === "string" ? date : date.toISOString();
+  // Extract year/month from ISO to avoid UTC/local timezone mismatch
+  const year = parseInt(iso.slice(0, 4), 10);
+  const month = parseInt(iso.slice(5, 7), 10) - 1; // 0-indexed
+  const d = new Date(year, month, 1);
   return new Intl.DateTimeFormat("es-CL", {
     month: "long",
     year: "numeric",
@@ -36,7 +40,10 @@ export function formatPeriodo(date: Date | string | null | undefined): string {
 
 export function formatPeriodoCorto(date: Date | string | null | undefined): string {
   if (!date) return "—";
-  const d = typeof date === "string" ? new Date(date) : date;
+  const iso = typeof date === "string" ? date : date.toISOString();
+  const year = parseInt(iso.slice(0, 4), 10);
+  const month = parseInt(iso.slice(5, 7), 10) - 1;
+  const d = new Date(year, month, 1);
   return new Intl.DateTimeFormat("es-CL", {
     month: "short",
     year: "2-digit",

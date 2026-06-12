@@ -5,6 +5,7 @@ import {
   View,
   StyleSheet,
 } from "@react-pdf/renderer";
+import { formatPeriodoCorto } from "@/lib/utils";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────
 
@@ -54,12 +55,6 @@ function clp(n: number): string {
 function fmtFecha(d: Date | null): string {
   if (!d) return "";
   return new Date(d).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
-function fmtPeriodoCorto(d: Date): string {
-  const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-  const dt = new Date(d);
-  return `${meses[dt.getMonth()]} ${dt.getFullYear()}`;
 }
 
 // Agrupa consumos por tipo
@@ -392,7 +387,7 @@ export function EstadoCuentaPDF({ data }: { data: EstadoCuentaData }) {
                       <View key={idx} style={s.tableRow}>
                         {esVariable ? (
                           <>
-                            <Text style={[s.tableCell, s.col0]}>{fmtPeriodoCorto(item.periodo)}</Text>
+                            <Text style={[s.tableCell, s.col0]}>{formatPeriodoCorto(item.periodo)}</Text>
                             <Text style={[s.tableCell, s.col1]}>{item.lecturaAnterior.toFixed(2)}</Text>
                             <Text style={[s.tableCell, s.col2]}>{item.lecturaActual.toFixed(2)}</Text>
                             <Text style={[s.tableCell, s.col3]}>{item.consumoCalculado.toFixed(2)}</Text>
@@ -400,7 +395,7 @@ export function EstadoCuentaPDF({ data }: { data: EstadoCuentaData }) {
                           </>
                         ) : (
                           <>
-                            <Text style={[s.tableCell, s.fCol0]}>{fmtPeriodoCorto(item.periodo)}</Text>
+                            <Text style={[s.tableCell, s.fCol0]}>{formatPeriodoCorto(item.periodo)}</Text>
                             <Text style={[s.tableCell, s.fCol1]}>{tipoNombre}</Text>
                             <Text style={[s.tableCellRight, s.fCol2]}>{clp(item.totalAPagar)}</Text>
                           </>

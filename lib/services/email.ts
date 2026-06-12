@@ -1,25 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getConfig } from "./config";
 import { formatCLP } from "@/lib/utils";
-import nodemailer from "nodemailer";
-
-function createTransport() {
-  const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT || "587");
-  const user = process.env.SMTP_USER;
-  // Google app passwords se muestran con espacios (xxxx xxxx xxxx xxxx) — se eliminan para auth
-  const pass = process.env.SMTP_PASS?.replace(/\s/g, "");
-
-  if (!host || !user || !pass) return null;
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-    tls: { rejectUnauthorized: process.env.NODE_ENV === "production" },
-  });
-}
+import { createTransport, escapeHtml } from "@/lib/smtp";
 
 async function sendEmail(to: string, subject: string, html: string): Promise<{ ok: boolean; error?: string }> {
   if (!to) return { ok: false, error: "Destinatario sin email" };
@@ -60,7 +42,7 @@ export async function enviarNotificacionEstadoCuenta(ecId: string): Promise<{ en
         <p style="color: #b0c4de; font-size: 13px; margin: 6px 0 0;">Estado de Cuenta — ${periodoLabel}</p>
       </div>
       <div style="background: #f7fafc; border: 1px solid #e8ecef; border-top: none; border-radius: 0 0 12px 12px; padding: 24px;">
-        <p style="margin: 0 0 16px;">Estimado/a <strong>${nombre}</strong>,</p>
+        <p style="margin: 0 0 16px;">Estimado/a <strong>${escapeHtml(nombre)}</strong>,</p>
         <p style="color: #42484d; margin: 0 0 20px;">Le enviamos el estado de cuenta correspondiente al período <strong>${periodoLabel}</strong> para la parcela <strong>${ec.parcela.numero}</strong>.</p>
 
         <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; border: 1px solid #e8ecef;">
@@ -126,7 +108,7 @@ export async function enviarNotificacionPagoAdmin(pagoId: string): Promise<{ env
       <p style="color: #42484d;">Se ha recibido un nuevo comprobante de pago.</p>
       <div style="background: #f1f4f6; border-radius: 12px; padding: 20px; margin: 20px 0;">
         <p><strong>Parcela:</strong> ${pago.parcela.numero}</p>
-        <p><strong>Propietario:</strong> ${nombre}</p>
+        <p><strong>Propietario:</strong> ${escapeHtml(nombre)}</p>
         <p><strong>Monto:</strong> ${formatCLP(Number(pago.monto))}</p>
         ${pago.concepto ? `<p><strong>Concepto:</strong> ${pago.concepto}</p>` : ""}
         <p><strong>Fecha operación:</strong> ${pago.fechaOperacion ? new Date(pago.fechaOperacion).toLocaleDateString("es-CL") : "No informada"}</p>

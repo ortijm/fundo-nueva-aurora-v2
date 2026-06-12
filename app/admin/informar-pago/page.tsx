@@ -19,7 +19,7 @@ export default async function InformarPagoAdminPage() {
     redirect("/admin/dashboard");
   }
 
-  const [config, parcelas] = await Promise.all([
+  const [config, parcelasRaw] = await Promise.all([
     getConfig(),
     prisma.parcela.findMany({
       where: { estado: "ACTIVA" },
@@ -27,6 +27,15 @@ export default async function InformarPagoAdminPage() {
       orderBy: { numero: "asc" },
     }),
   ]);
+
+  // Convert Decimal fields to plain numbers for Client Components
+  const parcelas = parcelasRaw.map((p) => ({
+    ...p,
+    deudaAgua: Number(p.deudaAgua),
+    deudaLuz: Number(p.deudaLuz),
+    deudaGc: Number(p.deudaGc),
+    deudaTotal: Number(p.deudaTotal),
+  }));
 
   return (
     <div className="space-y-6">
