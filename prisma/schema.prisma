@@ -115,7 +115,6 @@ model ConfiguracionSistema {
   rutTitular           String  @default("")
   nombreTitular        String  @default("")
 
-  franquiciaAguaM3     Decimal @default(30) @db.Decimal(8, 2)
   tarifaAgua1_10       Decimal @default(2000) @db.Decimal(10, 2)
   tarifaAgua11_20      Decimal @default(2500) @db.Decimal(10, 2)
   tarifaAgua21_30      Decimal @default(3500) @db.Decimal(10, 2)
@@ -141,10 +140,16 @@ enum TipoGastoComun {
   REDUCIDO
 }
 
+enum FranquiciaAgua {
+  M3_30
+  M3_15
+}
+
 model Parcela {
   id                String        @id @default(cuid())
   numero            String        @unique
   tipoGc            TipoGastoComun @default(NORMAL)
+  franquiciaAgua    FranquiciaAgua @default(M3_30)
   nombre            String        @default("")
   propietarioId     String?
   superficieM2      Decimal?      @db.Decimal(10, 2)

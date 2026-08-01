@@ -1,6 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { getConfig } from "./config";
 import { toDecimal } from "@/lib/utils";
+import type { Parcela, Prisma } from "@prisma/client";
+
+type TarifasAguaKey =
+  | "tarifaAgua1_10"
+  | "tarifaAgua11_20"
+  | "tarifaAgua21_30"
+  | "tarifaAgua31_40"
+  | "tarifaAgua41mas";
+
+/** Tarifas de agua: acepta Decimal (Prisma) o number (tests / inputs planos). */
+type TarifasAguaInput = { [K in TarifasAguaKey]: Prisma.Decimal.Value };
 
 export function calcularMontoAguaTramos(
   sobreconsumo: number,
@@ -18,12 +29,33 @@ export function calcularMontoAguaTramos(
   return sobreconsumo * tarifa;
 }
 
+/**
+ * Monto de agua facturable según la franquicia de la parcela (30 | 15 m³).
+ * Fuente única para calcularConsumo y los recálculos de estados de cuenta:
+ * sobreconsumo = max(0, consumo − franquicia) → tramo único de tarifa.
+ */
+export function calcularMontoAgua(
+  consumoCalculado: number,
+  franquiciaM3: number,
+  config: TarifasAguaInput
+): number {
+  const sobreconsumo = Math.max(0, consumoCalculado - franquiciaM3);
+  return calcularMontoAguaTramos(sobreconsumo, {
+    t1_10:   toDecimal(config.tarifaAgua1_10),
+    t11_20:  toDecimal(config.tarifaAgua11_20),
+    t21_30:  toDecimal(config.tarifaAgua21_30),
+    t31_40:  toDecimal(config.tarifaAgua31_40),
+    t41mas:  toDecimal(config.tarifaAgua41mas),
+  });
+}
+
 export async function calcularConsumo(
   parcelaId: string,
   tipoConsumoId: string,
   periodo: Date,
   lecturaActual: number,
-  lecturaAnteriorOverride?: number
+  lecturaAnteriorOverride?: number,
+  parcelaCargada?: Pick<Parcela, "id" | "franquiciaAgua">
 ) {
   const config = await getConfig();
   const tipoConsumo = await prisma.tipoConsumo.findUnique({ where: { id: tipoConsumoId } });
@@ -46,15 +78,20 @@ export async function calcularConsumo(
   if (tipoConsumo.esVariable) {
     const nombreLower = tipoConsumo.nombre.toLowerCase();
     if (nombreLower === "agua") {
-      const franquicia = toDecimal(config.franquiciaAguaM3);
-      const sobreconsumo = Math.max(0, consumoCalculado - franquicia);
-      montoConsumo = calcularMontoAguaTramos(sobreconsumo, {
-        t1_10:   toDecimal(config.tarifaAgua1_10),
-        t11_20:  toDecimal(config.tarifaAgua11_20),
-        t21_30:  toDecimal(config.tarifaAgua21_30),
-        t31_40:  toDecimal(config.tarifaAgua31_40),
-        t41mas:  toDecimal(config.tarifaAgua41mas),
-      });
+      // Franquicia de la parcela: si el llamador ya la cargó, evitar el findUnique extra
+      let franquiciaAgua = parcelaCargada?.franquiciaAgua;
+      if (!franquiciaAgua) {
+        const parcela = await prisma.parcela.findUnique({
+          where: { id: parcelaId },
+          select: { franquiciaAgua: true },
+        });
+        if (!parcela) throw new Error("Parcela no encontrada");
+        franquiciaAgua = parcela.franquiciaAgua;
+      }
+
+      const franquiciaM3 = franquiciaAgua === "M3_30" ? 30 : 15;
+      const sobreconsumo = Math.max(0, consumoCalculado - franquiciaM3);
+      montoConsumo = calcularMontoAgua(consumoCalculado, franquiciaM3, config);
       // tarifaAplicada referencial: tarifa del primer tramo activo
       tarifaAplicada = sobreconsumo > 0 ? toDecimal(config.tarifaAgua1_10) : 0;
     } else if (nombreLower === "luz") {

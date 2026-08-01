@@ -39,7 +39,6 @@ async function main() {
       tipoCuenta: "Cuenta Corriente",
       numeroCuenta: "00-123-45678-01",
       emailPagos: "pagos@nuevaaurora.cl",
-      franquiciaAguaM3: 30,
       tarifaAgua1_10: 2000,
       tarifaAgua11_20: 2500,
       tarifaAgua21_30: 3500,

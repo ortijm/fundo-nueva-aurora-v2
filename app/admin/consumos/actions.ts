@@ -209,7 +209,7 @@ export async function importarExcelConsumos(data: {
         // Si no viene, calcularConsumo la toma del último registro en BD.
         const lecturaAnteriorOverride: number | undefined = row.lecturaAnterior;
 
-        const calc = await calcularConsumo(parcela.id, tipoConsumoId, periodo, row.lecturaActual, lecturaAnteriorOverride);
+        const calc = await calcularConsumo(parcela.id, tipoConsumoId, periodo, row.lecturaActual, lecturaAnteriorOverride, parcela);
 
         await prisma.consumoMensual.upsert({
           where: { parcelaId_tipoConsumoId_periodo: { parcelaId: parcela.id, tipoConsumoId, periodo } },
