@@ -3,6 +3,10 @@ import { getConfig } from "./config";
 import { toDecimal } from "@/lib/utils";
 import type { Parcela, Prisma } from "@prisma/client";
 
+/** Mensaje único para la guardia de consumos asociados a EC/pago (Decisión 4). */
+export const MENSAJE_CONSUMO_NO_EDITABLE =
+  "El consumo ya está asociado a un estado de cuenta o pago y no puede editarse";
+
 type TarifasAguaKey =
   | "tarifaAgua1_10"
   | "tarifaAgua11_20"

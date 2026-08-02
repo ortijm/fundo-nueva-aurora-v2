@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { calcularConsumo, actualizarDeudasParcela } from "@/lib/services/consumos";
+import { calcularConsumo, actualizarDeudasParcela, MENSAJE_CONSUMO_NO_EDITABLE } from "@/lib/services/consumos";
 import { getConfig } from "@/lib/services/config";
 import { z } from "zod";
 import { withErrorHandling, unauthorized } from "@/lib/server-action-utils";
@@ -43,7 +43,7 @@ export async function guardarLectura(formData: FormData) {
       select: { estado: true },
     });
     if (existente && existente.estado !== "PENDIENTE") {
-      throw new Error("El consumo ya está asociado a un estado de cuenta o pago y no puede editarse");
+      throw new Error(MENSAJE_CONSUMO_NO_EDITABLE);
     }
 
     const calc = await calcularConsumo(parcelaId, tipoConsumoId, periodoDate, lecturaActual);
@@ -246,4 +246,71 @@ export async function importarExcelConsumos(data: {
     revalidatePath("/admin/consumos");
     return { ok, errores };
   }, "importarExcelConsumos");
+}
+
+const actualizarLecturaSchema = z.object({
+  consumoId: z.string().min(1, "Consumo requerido"),
+  lecturaAnterior: z.number().min(0, "La lectura anterior no puede ser negativa"),
+  lecturaActual: z.number().min(0, "La lectura actual no puede ser negativa"),
+});
+
+/**
+ * Edición AJAX de lecturas (spec edicion-lecturas-consumos, Requisito 5):
+ * auth ADMINISTRADOR, zod >= 0, solo consumos PENDIENTE, recálculo con la parcela
+ * ya cargada (franquicia, sin query extra) y actualización de deudas de la parcela.
+ */
+export async function actualizarLecturaConsumo(
+  consumoId: string,
+  lecturaAnterior: number,
+  lecturaActual: number
+) {
+  const session = await auth();
+  if (!session || session.user.rol !== "ADMINISTRADOR") return unauthorized();
+
+  const parsed = actualizarLecturaSchema.safeParse({ consumoId, lecturaAnterior, lecturaActual });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const { consumoId: id, lecturaAnterior: anterior, lecturaActual: actual } = parsed.data;
+
+  return withErrorHandling(async () => {
+    const consumo = await prisma.consumoMensual.findUnique({
+      where: { id },
+      include: { parcela: { select: { id: true, franquiciaAgua: true } } },
+    });
+    if (!consumo) throw new Error("Consumo no encontrado");
+
+    if (consumo.estado !== "PENDIENTE") {
+      throw new Error(MENSAJE_CONSUMO_NO_EDITABLE);
+    }
+
+    // Decisión 2: la parcela ya viene cargada → recalcula sin query extra y con su franquicia
+    const calc = await calcularConsumo(
+      consumo.parcelaId,
+      consumo.tipoConsumoId,
+      consumo.periodo,
+      actual,
+      anterior,
+      consumo.parcela,
+    );
+
+    await prisma.consumoMensual.update({
+      where: { id },
+      data: {
+        lecturaAnterior: calc.lecturaAnterior,
+        lecturaActual: calc.lecturaActual,
+        consumoCalculado: calc.consumoCalculado,
+        tarifaAplicada: calc.tarifaAplicada,
+        montoConsumo: calc.montoConsumo,
+        cargoFijo: calc.cargoFijo,
+        totalAPagar: calc.totalAPagar,
+        registradoPorId: session.user.id,
+      },
+    });
+
+    await actualizarDeudasParcela(consumo.parcelaId);
+    revalidatePath("/admin/consumos");
+    return { success: true };
+  }, "actualizarLecturaConsumo");
 }

@@ -23,6 +23,7 @@ vi.mock("@/lib/prisma", () => ({
 vi.mock("@/lib/services/consumos", () => ({
   calcularConsumo: mockCalcularConsumo,
   actualizarDeudasParcela: mockActualizarDeudas,
+  MENSAJE_CONSUMO_NO_EDITABLE: "El consumo ya está asociado a un estado de cuenta o pago y no puede editarse",
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mockRevalidatePath }));

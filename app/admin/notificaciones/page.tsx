@@ -13,6 +13,18 @@ export default async function NotificacionesPage() {
     take: 100,
   });
 
+  // Requisito 1 (notificaciones-comunicado): multi-select solo con parcelas activas y con propietario
+  const parcelasActivas = await prisma.parcela.findMany({
+    where: { estado: "ACTIVA", propietarioId: { not: null } },
+    select: {
+      id: true,
+      numero: true,
+      nombre: true,
+      propietario: { select: { id: true, firstName: true, lastName: true, username: true } },
+    },
+    orderBy: { numero: "asc" },
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -35,6 +47,14 @@ export default async function NotificacionesPage() {
           leido: n.leido,
           creado: n.creado.toISOString(),
           errorDetalle: n.errorDetalle || null,
+        }))}
+        parcelasActivas={parcelasActivas.map(p => ({
+          id: p.id,
+          numero: p.numero,
+          nombre: p.nombre,
+          propietario: p.propietario
+            ? `${p.propietario.firstName} ${p.propietario.lastName}`.trim() || p.propietario.username
+            : null,
         }))}
       />
     </div>

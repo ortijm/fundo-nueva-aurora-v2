@@ -66,3 +66,18 @@ export function toDecimal(value: unknown): number {
   }
   return Number(value);
 }
+
+/**
+ * Mensaje de resultado del envío de comunicado (Requisito 2 de envio-comunicado-seguro):
+ * éxito con destinatarios alcanzados + resumen de errores parciales cuando los hay.
+ * Pura y testeable; el componente decide el estilo del toast según haya errores.
+ */
+export function construirMensajeResultadoEnvio(ok: number, erroresDetalle: string[]): string {
+  let msg = `Comunicado enviado a ${ok} destinatario${ok !== 1 ? "s" : ""}`;
+  if (erroresDetalle.length > 0) {
+    const resumen = erroresDetalle.slice(0, 2).join(" · ");
+    const extra = erroresDetalle.length > 2 ? ` y ${erroresDetalle.length - 2} más` : "";
+    msg += ` · ${erroresDetalle.length} error${erroresDetalle.length !== 1 ? "es" : ""}: ${resumen}${extra}`;
+  }
+  return msg;
+}

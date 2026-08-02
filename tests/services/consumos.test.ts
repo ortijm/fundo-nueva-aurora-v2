@@ -128,6 +128,45 @@ describe("calcularConsumo", () => {
     await expect(calcularConsumo("parcela-inexistente", "tipo-agua", new Date("2024-02-01"), 50, 0))
       .rejects.toThrow("Parcela no encontrada");
   });
+
+  it("Escenario 1 edicion-lecturas: 100 → 160 con franquicia M3_30 recalcula 60 consumidos y 30 m³ facturables", async () => {
+    mockGetConfig.mockResolvedValue(configBase);
+
+    // Contrato usado por actualizarLecturaConsumo: override + parcela ya cargada (sin findUnique extra)
+    const result = await calcularConsumo(
+      "parcela-1",
+      "tipo-agua",
+      new Date("2025-02-01"),
+      160,
+      100,
+      { id: "parcela-1", franquiciaAgua: "M3_30" },
+    );
+
+    expect(result.lecturaAnterior).toBe(100);
+    expect(result.lecturaActual).toBe(160);
+    expect(result.consumoCalculado).toBe(60); // 160 - 100
+    // franquicia 30 m³ exenta → 30 m³ facturados; tramo "sobreconsumo ≤ 30" → t21_30 (3500), según calcularMontoAguaTramos
+    expect(result.montoConsumo).toBe(30 * 3500);
+    expect(result.totalAPagar).toBe(105000);
+    expect(mockParcelaFindUnique).not.toHaveBeenCalled();
+  });
+
+  it("Escenario 2 edicion-lecturas: lecturaAnterior mayor que lecturaActual → consumo 0 (nunca negativo)", async () => {
+    mockGetConfig.mockResolvedValue(configBase);
+
+    const result = await calcularConsumo(
+      "parcela-1",
+      "tipo-agua",
+      new Date("2025-02-01"),
+      150,
+      200,
+      { id: "parcela-1", franquiciaAgua: "M3_30" },
+    );
+
+    expect(result.consumoCalculado).toBe(0);
+    expect(result.montoConsumo).toBe(0);
+    expect(result.totalAPagar).toBe(0);
+  });
 });
 
 describe("calcularMontoAgua", () => {

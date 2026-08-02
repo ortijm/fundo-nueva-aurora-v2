@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatCLP, formatDate, formatPeriodo, formatPeriodoCorto, toDecimal, formatNumber } from "../lib/utils";
+import { formatCLP, formatDate, formatPeriodo, formatPeriodoCorto, toDecimal, formatNumber, construirMensajeResultadoEnvio } from "../lib/utils";
 
 describe("formatCLP", () => {
   it("formatea número en pesos chilenos", () => {
@@ -86,5 +86,30 @@ describe("formatNumber", () => {
 
   it("maneja null", () => {
     expect(formatNumber(null)).toBe("0.00");
+  });
+});
+
+describe("construirMensajeResultadoEnvio", () => {
+  it("envío exitoso: pluraliza destinatarios", () => {
+    expect(construirMensajeResultadoEnvio(5, [])).toBe("Comunicado enviado a 5 destinatarios");
+  });
+
+  it("envío exitoso: singular para 1 destinatario", () => {
+    expect(construirMensajeResultadoEnvio(1, [])).toBe("Comunicado enviado a 1 destinatario");
+  });
+
+  it("envío con error parcial: resume el detalle de errores", () => {
+    const msg = construirMensajeResultadoEnvio(3, ["Ana G: Sin email registrado"]);
+    expect(msg).toBe("Comunicado enviado a 3 destinatarios · 1 error: Ana G: Sin email registrado");
+  });
+
+  it("envío con más de 2 errores: resume con 'y N más'", () => {
+    const msg = construirMensajeResultadoEnvio(2, ["A: x", "B: y", "C: z"]);
+    expect(msg).toBe("Comunicado enviado a 2 destinatarios · 3 errores: A: x · B: y y 1 más");
+  });
+
+  it("envío totalmente fallido: 0 destinatarios alcanzados", () => {
+    const msg = construirMensajeResultadoEnvio(0, ["A: Sin email registrado", "B: SMTP no configurado"]);
+    expect(msg).toBe("Comunicado enviado a 0 destinatarios · 2 errores: A: Sin email registrado · B: SMTP no configurado");
   });
 });

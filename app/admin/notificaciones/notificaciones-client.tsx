@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { getResultData } from "@/lib/server-action-utils";
 import { enviarComunicadoAction } from "./actions";
-import { formatDate } from "@/lib/utils";
+import { formatDate, construirMensajeResultadoEnvio } from "@/lib/utils";
 import { Plus, Send, Check, AlertCircle, Clock } from "lucide-react";
 
 interface NotificacionRow {
@@ -20,14 +20,25 @@ interface NotificacionRow {
   errorDetalle: string | null;
 }
 
-interface Props {
-  notificaciones: NotificacionRow[];
+interface ParcelaActiva {
+  id: string;
+  numero: string;
+  nombre: string | null;
+  propietario: string | null;
 }
 
-export function NotificacionesClient({ notificaciones }: Props) {
+interface Props {
+  notificaciones: NotificacionRow[];
+  parcelasActivas: ParcelaActiva[];
+}
+
+export function NotificacionesClient({ notificaciones, parcelasActivas }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [showModal, setShowModal] = useState(false);
+  const [opcion, setOpcion] = useState<string>("todos");
+  const [parcelaSeleccionadas, setParcelaSeleccionadas] = useState<string[]>([]);
+  const [enviando, setEnviando] = useState(false);
 
   const total = notificaciones.length;
   const enviados = notificaciones.filter(n => n.estadoEnvio === "ENVIADO").length;
@@ -36,19 +47,48 @@ export function NotificacionesClient({ notificaciones }: Props) {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const result = await enviarComunicadoAction(fd);
-    if (!result.success) {
-      toast.error(result.error);
+
+    // Requisito 1: opción "parcelas" sin selección no procede (validación también en servidor)
+    if (opcion === "parcelas" && parcelaSeleccionadas.length === 0) {
+      toast.error("Selecciona al menos una parcela");
       return;
     }
-    const d = getResultData<{ ok?: number; errores?: number }>(result);
-    const nOk = d?.ok ?? 0;
-    const nErrores = d?.errores ?? 0;
-    const errMsg = nErrores > 0 ? ` · ${nErrores} error${nErrores !== 1 ? "es" : ""}` : "";
-    toast.success(`Comunicado enviado a ${nOk} destinatario${nOk !== 1 ? "s" : ""}${errMsg}`);
-    setShowModal(false);
-    startTransition(() => router.refresh());
+
+    const fd = new FormData(e.currentTarget);
+    fd.set("destinatarios", opcion);
+    if (opcion === "parcelas") {
+      fd.delete("parcelaIds");
+      for (const id of parcelaSeleccionadas) fd.append("parcelaIds", id);
+    }
+
+    // Causa raíz del doble envío: bloquear ANTES del await de la server action (envio-comunicado-seguro R1)
+    setEnviando(true);
+    try {
+      const result = await enviarComunicadoAction(fd);
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      const d = getResultData<{ ok?: number; errores?: number; erroresDetalle?: string[] }>(result);
+      const nOk = d?.ok ?? 0;
+      const erroresDetalle = d?.erroresDetalle ?? [];
+      const msg = construirMensajeResultadoEnvio(nOk, erroresDetalle);
+      if (erroresDetalle.length > 0) {
+        toast.error(msg);
+      } else {
+        toast.success(msg);
+      }
+      setShowModal(false);
+      startTransition(() => router.refresh());
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  function abrirModal() {
+    setOpcion("todos");
+    setParcelaSeleccionadas([]);
+    setShowModal(true);
   }
 
   const tipoLabel: Record<string, string> = {
@@ -135,7 +175,7 @@ export function NotificacionesClient({ notificaciones }: Props) {
           Historial de Notificaciones
         </h2>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={abrirModal}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white"
           style={{ background: "linear-gradient(135deg, var(--primary) 0%, var(--primary-container) 100%)" }}
         >
@@ -220,12 +260,66 @@ export function NotificacionesClient({ notificaciones }: Props) {
                 <select
                   name="destinatarios"
                   required
+                  value={opcion}
+                  onChange={(e) => {
+                    setOpcion(e.target.value);
+                    if (e.target.value !== "parcelas") setParcelaSeleccionadas([]);
+                  }}
                   className="w-full px-3 py-2.5 text-sm rounded-lg"
                   style={{ background: "var(--surface-low)", color: "var(--on-surface)" }}
                 >
                   <option value="todos">Todos los propietarios</option>
+                  <option value="morosos">Solo morosos</option>
+                  <option value="parcelas">Seleccionar parcelas…</option>
                 </select>
               </div>
+
+              {opcion === "parcelas" && (
+                <div>
+                  <p className="block text-xs font-semibold mb-1.5" style={{ color: "var(--on-surface-muted)" }}>
+                    Parcelas activas *
+                  </p>
+                  <div
+                    className="max-h-48 overflow-y-auto rounded-lg p-1.5 space-y-0.5"
+                    style={{ background: "var(--surface-low)" }}
+                  >
+                    {parcelasActivas.length === 0 && (
+                      <p className="text-xs px-2 py-2" style={{ color: "var(--on-surface-muted)" }}>
+                        No hay parcelas activas con propietario asignado.
+                      </p>
+                    )}
+                    {parcelasActivas.map((p) => (
+                      <label
+                        key={p.id}
+                        className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer hover:opacity-80"
+                      >
+                        <input
+                          type="checkbox"
+                          name="parcelaIds"
+                          value={p.id}
+                          checked={parcelaSeleccionadas.includes(p.id)}
+                          onChange={(e) => {
+                            const id = e.target.value;
+                            setParcelaSeleccionadas((prev) =>
+                              e.target.checked ? [...prev, id] : prev.filter((x) => x !== id)
+                            );
+                          }}
+                          className="accent-[var(--primary)]"
+                        />
+                        <span className="text-sm" style={{ color: "var(--on-surface)" }}>
+                          {p.numero}{p.nombre ? ` — ${p.nombre}` : ""}
+                        </span>
+                        {p.propietario && (
+                          <span className="text-xs ml-auto" style={{ color: "var(--on-surface-muted)" }}>
+                            {p.propietario}
+                          </span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--on-surface-muted)" }}>Asunto *</label>
                 <input
@@ -248,17 +342,18 @@ export function NotificacionesClient({ notificaciones }: Props) {
               <div className="flex gap-3 pt-1">
                 <button
                   type="submit"
-                  disabled={isPending}
+                  disabled={enviando || isPending}
                   className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40 flex items-center justify-center gap-2"
                   style={{ background: "linear-gradient(135deg, var(--primary) 0%, var(--primary-container) 100%)" }}
                 >
                   <Send size={14} />
-                  Enviar
+                  {enviando ? "Enviando..." : "Enviar"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+                  disabled={enviando}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40"
                   style={{ background: "var(--surface-low)", color: "var(--on-surface-muted)" }}
                 >
                   Cancelar

@@ -5,7 +5,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { guardarLectura, importarExcelConsumos } from "./actions";
+import { guardarLectura, importarExcelConsumos, actualizarLecturaConsumo } from "./actions";
 import { formatCLP } from "@/lib/utils";
 import { Upload, Check, Download } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -62,6 +62,9 @@ export function ConsumosClient({
   const [periodo, setPeriodo] = useState(periodoActual);
   const [tipo, setTipo] = useState(tipoSeleccionado);
   const [parcela, setParcela] = useState(parcelaSeleccionada);
+  // Edición AJAX de lecturas (spec edicion-lecturas-consumos): valores editados por fila + fila en guardado
+  const [edicion, setEdicion] = useState<Record<string, { anterior: string; actual: string }>>({});
+  const [guardando, setGuardando] = useState<string | null>(null);
 
   const tipoActual = tiposConsumo.find((t) => t.id === tipo);
   const esTodos = tipo === "todos";
@@ -93,6 +96,68 @@ export function ConsumosClient({
     toast.success("Lectura guardada");
     setLecturas((prev) => { const next = { ...prev }; delete next[parcelaId]; return next; });
     startTransition(() => router.refresh());
+  }
+
+  // ─── Edición AJAX de lecturaAnterior/lecturaActual (Requisitos 1–4) ─────
+  async function guardarConsumoFila(rowKey: string, consumo: ConsumoRow) {
+    if (!consumo.id) return;
+    if (guardando) return; // Escenario 7: bloquea el doble guardado mientras uno está en curso
+
+    const anterior = parseFloat(edicion[rowKey]?.anterior ?? String(consumo.lecturaAnterior));
+    const actual = parseFloat(edicion[rowKey]?.actual ?? String(consumo.lecturaActual));
+    if (isNaN(anterior) || isNaN(actual) || anterior < 0 || actual < 0) {
+      toast.error("Las lecturas deben ser números mayores o iguales a 0");
+      return;
+    }
+
+    setGuardando(rowKey);
+    try {
+      const result = await actualizarLecturaConsumo(consumo.id, anterior, actual);
+      if (!result.success) {
+        toast.error(result.error); // conserva los valores editados para corregirlos
+        return;
+      }
+      toast.success("Cambio realizado, datos actualizados");
+      setEdicion((prev) => { const next = { ...prev }; delete next[rowKey]; return next; });
+      startTransition(() => router.refresh());
+    } finally {
+      setGuardando(null);
+    }
+  }
+
+  // Celda editable SOLO si estado === "PENDIENTE"; si no, input disabled con tooltip (Requisito 4)
+  function renderCeldaLectura(rowKey: string, consumo: ConsumoRow, campo: "anterior" | "actual") {
+    const editable = consumo.estado === "PENDIENTE";
+    const bloqueada = guardando === rowKey;
+    const valorBase = campo === "anterior" ? consumo.lecturaAnterior : consumo.lecturaActual;
+    const valor = edicion[rowKey]?.[campo] ?? String(valorBase);
+
+    return (
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        value={valor}
+        disabled={!editable || bloqueada}
+        onChange={(e) =>
+          setEdicion((prev) => ({
+            ...prev,
+            [rowKey]: {
+              anterior: prev[rowKey]?.anterior ?? String(consumo.lecturaAnterior),
+              actual: prev[rowKey]?.actual ?? String(consumo.lecturaActual),
+              [campo]: e.target.value,
+            },
+          }))
+        }
+        onKeyDown={(e) => {
+          if (e.key === "Enter") guardarConsumoFila(rowKey, consumo);
+        }}
+        onBlur={() => guardarConsumoFila(rowKey, consumo)}
+        className="w-28 text-right px-2 py-1.5 text-sm rounded-lg disabled:opacity-50"
+        style={{ background: "var(--surface-low)", color: "var(--on-surface)" }}
+        title={!editable ? "Consumo asociado a estado de cuenta o pago" : undefined}
+      />
+    );
   }
 
   function handleDescargarPlantilla() {
@@ -255,14 +320,14 @@ export function ConsumosClient({
                       {t.nombre}
                     </td>
                     <td className="py-3 px-4 text-right" style={{ color: "var(--on-surface-muted)" }}>
-                      {t.esVariable ? (consumo?.lecturaAnterior.toFixed(2) ?? "—") : "—"}
+                      {t.esVariable && hasLectura && consumo
+                        ? renderCeldaLectura(rowKey, consumo, "anterior")
+                        : <span style={{ color: "var(--on-surface-muted)" }}>—</span>}
                     </td>
                     <td className="py-3 px-4 text-center">
                       {t.esVariable ? (
-                        hasLectura ? (
-                          <span className="text-sm font-medium" style={{ color: "var(--on-surface)" }}>
-                            {consumo.lecturaActual.toFixed(2)}
-                          </span>
+                        hasLectura && consumo ? (
+                          renderCeldaLectura(rowKey, consumo, "actual")
                         ) : (
                           <input
                             type="number"
@@ -342,14 +407,14 @@ export function ConsumosClient({
                     )}
                   </td>
                   <td className="py-3 px-4 text-right" style={{ color: "var(--on-surface-muted)" }}>
-                    {tipoActual?.esVariable ? (consumo?.lecturaAnterior.toFixed(2) ?? "—") : "—"}
+                    {tipoActual?.esVariable && hasLectura && consumo
+                      ? renderCeldaLectura(parcela.id, consumo, "anterior")
+                      : <span style={{ color: "var(--on-surface-muted)" }}>—</span>}
                   </td>
                   <td className="py-3 px-4 text-center">
                     {tipoActual?.esVariable ? (
-                      hasLectura ? (
-                        <span className="text-sm font-medium" style={{ color: "var(--on-surface)" }}>
-                          {consumo.lecturaActual.toFixed(2)}
-                        </span>
+                      hasLectura && consumo ? (
+                        renderCeldaLectura(parcela.id, consumo, "actual")
                       ) : (
                         <input
                           type="number"
