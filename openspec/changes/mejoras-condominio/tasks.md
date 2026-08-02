@@ -62,15 +62,15 @@ Chain strategy: pending
 
 ## Phase 6: Notificaciones UI (sub-cambio 6)
 
-- [ ] 6.1 `page.tsx`: prop `parcelasActivas` (activas con propietario) al cliente
-- [ ] 6.2 Modal con 3 opciones + multi-select en `notificaciones-client.tsx`; "Seleccionar parcelas…" sin selección → error
-- [ ] 6.3 `enviando` antes del await; botón `disabled` con "Enviando..."; toast de resultado (éxito / errores parciales)
+- [x] 6.1 `page.tsx`: prop `parcelasActivas` (activas con propietario) al cliente
+- [x] 6.2 Modal con 3 opciones + multi-select en `notificaciones-client.tsx`; "Seleccionar parcelas…" sin selección → error
+- [x] 6.3 `enviando` antes del await; botón `disabled` con "Enviando..."; toast de resultado (éxito / errores parciales)
 
 ## Phase 7: Edición de lecturas (sub-cambio 7)
 
-- [ ] 7.1 `actualizarLecturaConsumo` en `app/admin/consumos/actions.ts`: auth ADMINISTRADOR, zod ≥ 0, guardia estado PENDIENTE, recalcular con parcela cargada, `actualizarDeudasParcela`, `revalidatePath`
-- [ ] 7.2 `consumos-client.tsx`: inputs controlados solo `lecturaAnterior`/`lecturaActual` en PENDIENTE; disabled + tooltip en CON_ESTADO_CUENTA/PAGO_INFORMADO/PAGADO
-- [ ] 7.3 Guardado en Enter/blur → toast "Cambio realizado, datos actualizados"; bloqueo de celdas durante guardado; error conserva valores editados
+- [x] 7.1 `actualizarLecturaConsumo` en `app/admin/consumos/actions.ts`: auth ADMINISTRADOR, zod ≥ 0, guardia estado PENDIENTE, recalcular con parcela cargada, `actualizarDeudasParcela`, `revalidatePath`
+- [x] 7.2 `consumos-client.tsx`: inputs controlados solo `lecturaAnterior`/`lecturaActual` en PENDIENTE; disabled + tooltip en CON_ESTADO_CUENTA/PAGO_INFORMADO/PAGADO
+- [x] 7.3 Guardado en Enter/blur → toast "Cambio realizado, datos actualizados"; bloqueo de celdas durante guardado; error conserva valores editados
 
 ## Phase 8: Cierre (sub-cambio 8)
 
