@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { actualizarDeudasParcela, calcularMontoAguaTramos } from "@/lib/services/consumos";
+import { actualizarDeudasParcela, calcularMontoAgua } from "@/lib/services/consumos";
 import { enviarNotificacionEstadoCuenta } from "@/lib/services/email";
 import { getConfig } from "@/lib/services/config";
 
@@ -26,6 +26,13 @@ export async function generarEstadoCuenta(parcelaId: string, periodoStr: string)
   const periodo = new Date(periodoStr + "-01");
 
   return withErrorHandling(async () => {
+    // Cargar parcela UNA vez: franquicia + propietario (Decisión 2 — evita query duplicada en la notificación)
+    const parcela = await prisma.parcela.findUnique({
+      where: { id: parcelaId },
+      select: { numero: true, franquiciaAgua: true, propietario: true },
+    });
+    if (!parcela) return { success: false, error: "Parcela no encontrada" };
+
     // Buscar consumos PENDIENTE del período
     const consumos = await prisma.consumoMensual.findMany({
       where: { parcelaId, periodo, estado: "PENDIENTE" },
@@ -36,6 +43,8 @@ export async function generarEstadoCuenta(parcelaId: string, periodoStr: string)
 
     // Obtener config actual para recalcular montos
     const config = await getConfig();
+
+    const franquiciaM3 = parcela.franquiciaAgua === "M3_30" ? 30 : 15;
 
     // Calcular subtotales con montos actuales de config
     let subtotalAgua = 0, subtotalLuz = 0, subtotalGc = 0;
@@ -48,16 +57,8 @@ export async function generarEstadoCuenta(parcelaId: string, periodoStr: string)
         monto = Number(c.consumoCalculado) * Number(config.costoLuzKwh);
         subtotalLuz += monto;
       } else if (nombre.includes("agua")) {
-        // Recalcular agua con tarifas actuales
-        const francequia = Number(config.franquiciaAguaM3);
-        const sobreconsumo = Math.max(0, Number(c.consumoCalculado) - francequia);
-        monto = calcularMontoAguaTramos(sobreconsumo, {
-          t1_10: Number(config.tarifaAgua1_10),
-          t11_20: Number(config.tarifaAgua11_20),
-          t21_30: Number(config.tarifaAgua21_30),
-          t31_40: Number(config.tarifaAgua31_40),
-          t41mas: Number(config.tarifaAgua41mas),
-        });
+        // Recalcular agua con tarifas actuales y la franquicia DE LA PARCELA (Requisito 4)
+        monto = calcularMontoAgua(Number(c.consumoCalculado), franquiciaM3, config);
         subtotalAgua += monto;
       } else {
         subtotalGc += monto;
@@ -122,16 +123,10 @@ export async function generarEstadoCuenta(parcelaId: string, periodoStr: string)
 
     await actualizarDeudasParcela(parcelaId);
 
-    // Enviar email y registrar notificación
+    // Enviar email y registrar notificación (parcela ya cargada al inicio — sin query duplicada)
     const emailResult = await enviarNotificacionEstadoCuenta(ec.id);
 
-    // Buscar propietario para crear registro de notificación
-    const parcela = await prisma.parcela.findUnique({
-      where: { id: parcelaId },
-      include: { propietario: true },
-    });
-
-    if (parcela?.propietario) {
+    if (parcela.propietario) {
       const periodoLabel = periodo.toLocaleDateString("es-CL", { month: "long", year: "numeric" });
       await prisma.notificacion.create({
         data: {
@@ -180,7 +175,8 @@ export async function generarECSinNotificacion(parcelaId: string, periodoStr: st
     if (parcela.consumos.length === 0) return { success: false, error: "No hay consumos pendientes para este periodo" };
 
     const consumos = parcela.consumos;
-    
+    const franquiciaM3 = parcela.franquiciaAgua === "M3_30" ? 30 : 15;
+
     // Obtener config actual para recalcular montos
     const config = await getConfig();
 
@@ -197,16 +193,8 @@ export async function generarECSinNotificacion(parcelaId: string, periodoStr: st
         monto = Number(c.consumoCalculado) * Number(config.costoLuzKwh);
         subtotalLuz += monto;
       } else if (nombre.includes("agua")) {
-        // Recalcular agua con tarifas actuales
-        const francequia = Number(config.franquiciaAguaM3);
-        const sobreconsumo = Math.max(0, Number(c.consumoCalculado) - francequia);
-        monto = calcularMontoAguaTramos(sobreconsumo, {
-          t1_10: Number(config.tarifaAgua1_10),
-          t11_20: Number(config.tarifaAgua11_20),
-          t21_30: Number(config.tarifaAgua21_30),
-          t31_40: Number(config.tarifaAgua31_40),
-          t41mas: Number(config.tarifaAgua41mas),
-        });
+        // Recalcular agua con tarifas actuales y la franquicia DE LA PARCELA ya cargada (Requisito 4)
+        monto = calcularMontoAgua(Number(c.consumoCalculado), franquiciaM3, config);
         subtotalAgua += monto;
       } else if (nombre.includes("gasto")) {
         subtotalGc += monto;

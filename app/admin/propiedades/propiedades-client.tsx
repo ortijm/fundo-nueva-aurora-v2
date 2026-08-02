@@ -13,6 +13,7 @@ interface ParcelaItem {
   estado: string; deudaTotal: number; deudaAgua: number; deudaLuz: number; deudaGc: number;
   propietarioId: string | null; propietario: PropietarioInfo | null;
   tipoGc: string;
+  franquiciaAgua: string;
 }
 interface ParcelaInfo {
   id: string;
@@ -175,6 +176,7 @@ export function PropiedadesClient({
                     <th className="text-left py-3 px-4 text-xs uppercase tracking-wider font-semibold" style={{ color: "var(--on-surface-muted)" }}>Propietario</th>
                     <th className="text-left py-3 px-4 text-xs uppercase tracking-wider font-semibold" style={{ color: "var(--on-surface-muted)" }}>Contacto</th>
                     <th className="text-center py-3 px-4 text-xs uppercase tracking-wider font-semibold" style={{ color: "var(--on-surface-muted)" }}>GC</th>
+                    <th className="text-center py-3 px-4 text-xs uppercase tracking-wider font-semibold" style={{ color: "var(--on-surface-muted)" }}>Franquicia</th>
                     <th className="text-center py-3 px-4 text-xs uppercase tracking-wider font-semibold" style={{ color: "var(--on-surface-muted)" }}>Estado</th>
                     <th className="py-3 px-4 text-xs uppercase tracking-wider font-semibold text-center" style={{ color: "var(--on-surface-muted)" }}>Acciones</th>
                   </tr>
@@ -182,7 +184,7 @@ export function PropiedadesClient({
                 <tbody>
                   {filtradas.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-sm" style={{ color: "var(--on-surface-muted)" }}>
+                      <td colSpan={7} className="py-8 text-center text-sm" style={{ color: "var(--on-surface-muted)" }}>
                         No hay unidades registradas.
                       </td>
                     </tr>
@@ -207,6 +209,14 @@ export function PropiedadesClient({
                           style={{ fontSize: 10 }}
                         >
                           {p.tipoGc === "REDUCIDO" ? "$15.000" : "$25.000"}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span
+                          className={p.franquiciaAgua === "M3_15" ? "chip-warning" : "chip-confirmed"}
+                          style={{ fontSize: 10 }}
+                        >
+                          {p.franquiciaAgua === "M3_15" ? "15 m³" : "30 m³"}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-center">
@@ -386,6 +396,13 @@ export function PropiedadesClient({
                 <select name="tipoGc" defaultValue={editandoParcela?.tipoGc || "NORMAL"} className="w-full px-3 py-2.5 text-sm rounded-lg" style={{ background: "var(--surface-low)", color: "var(--on-surface)" }}>
                   <option value="NORMAL">Normal ($25.000)</option>
                   <option value="REDUCIDO">Reducido ($15.000)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--on-surface-muted)" }}>Franquicia Agua</label>
+                <select name="franquiciaAgua" defaultValue={editandoParcela?.franquiciaAgua || "M3_30"} className="w-full px-3 py-2.5 text-sm rounded-lg" style={{ background: "var(--surface-low)", color: "var(--on-surface)" }}>
+                  <option value="M3_30">30 m³</option>
+                  <option value="M3_15">15 m³</option>
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">

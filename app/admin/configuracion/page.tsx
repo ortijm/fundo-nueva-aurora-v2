@@ -33,7 +33,6 @@ export default async function ConfiguracionPage() {
           emailPagos: config.emailPagos,
           rutTitular: config.rutTitular,
           nombreTitular: config.nombreTitular,
-          franquiciaAguaM3: Number(config.franquiciaAguaM3),
           tarifaAgua1_10: Number(config.tarifaAgua1_10),
           tarifaAgua11_20: Number(config.tarifaAgua11_20),
           tarifaAgua21_30: Number(config.tarifaAgua21_30),

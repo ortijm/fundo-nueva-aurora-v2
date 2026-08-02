@@ -8,7 +8,6 @@ import { guardarConfiguracion } from "./actions";
 interface Config {
   nombreCondominio: string; rutCondominio: string; direccion: string; telefono: string; emailContacto: string;
   banco: string; tipoCuenta: string; numeroCuenta: string; emailPagos: string; rutTitular: string; nombreTitular: string;
-  franquiciaAguaM3: number;
   tarifaAgua1_10: number; tarifaAgua11_20: number; tarifaAgua21_30: number; tarifaAgua31_40: number; tarifaAgua41mas: number;
   costoLuzKwh: number;
   montoGcNuevo: number; montoGcConHistorial: number; mensajePieEc: string;
@@ -111,10 +110,6 @@ export function ConfiguracionForm({ config }: { config: Config }) {
           Cobro escalonado sobre el sobreconsumo (m³ por encima de la franquicia)
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div>
-            <label className={labelClass} style={labelStyle}>Franquicia (m³ sin costo)</label>
-            <input name="franquiciaAguaM3" type="number" step="0.01" min="0" defaultValue={config.franquiciaAguaM3} className={inputClass} style={inputStyle} />
-          </div>
           <div>
             <label className={labelClass} style={labelStyle}>Tramo 1–10 m³ ($ / m³)</label>
             <input name="tarifaAgua1_10" type="number" step="1" min="0" defaultValue={config.tarifaAgua1_10} className={inputClass} style={inputStyle} />

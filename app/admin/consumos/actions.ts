@@ -37,6 +37,15 @@ export async function guardarLectura(formData: FormData) {
   const periodoDate = new Date(periodo + "-01");
 
   return withErrorHandling(async () => {
+    // Guardia (Decisión 4): no sobrescribir consumos asociados a EC/pago
+    const existente = await prisma.consumoMensual.findUnique({
+      where: { parcelaId_tipoConsumoId_periodo: { parcelaId, tipoConsumoId, periodo: periodoDate } },
+      select: { estado: true },
+    });
+    if (existente && existente.estado !== "PENDIENTE") {
+      throw new Error("El consumo ya está asociado a un estado de cuenta o pago y no puede editarse");
+    }
+
     const calc = await calcularConsumo(parcelaId, tipoConsumoId, periodoDate, lecturaActual);
 
     await prisma.consumoMensual.upsert({
@@ -204,6 +213,16 @@ export async function importarExcelConsumos(data: {
         if (!tipoConsumoId) { errores.push(`Tipo desconocido en parcela ${row.parcelaNumero}`); continue; }
 
         const periodo = new Date(row.periodo + "-01");
+
+        // Guardia (Decisión 4): error por fila si el consumo ya está asociado a EC/pago, sin abortar el resto
+        const existente = await prisma.consumoMensual.findUnique({
+          where: { parcelaId_tipoConsumoId_periodo: { parcelaId: parcela.id, tipoConsumoId, periodo } },
+          select: { estado: true },
+        });
+        if (existente && existente.estado !== "PENDIENTE") {
+          errores.push(`Parcela ${row.parcelaNumero}: el consumo ya está asociado a un estado de cuenta o pago y no puede sobrescribirse`);
+          continue;
+        }
 
         // Si el Excel trae lecturaAnterior, siempre usarla (permite corregir datos al reimportar).
         // Si no viene, calcularConsumo la toma del último registro en BD.

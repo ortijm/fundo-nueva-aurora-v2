@@ -43,15 +43,15 @@ Chain strategy: pending
 
 ## Phase 3: Estados de cuenta y guardias (sub-cambio 3)
 
-- [ ] 3.1 `generarEstadoCuenta` (estados-cuenta/actions.ts:52): cargar parcela 1 vez (`franquiciaAgua` + `propietario`), recalcular con `calcularMontoAgua`; eliminar query duplicada L129
-- [ ] 3.2 `generarECSinNotificacion` (L201): usar parcela ya cargada (L168) + `calcularMontoAgua`
-- [ ] 3.3 Guardia en `guardarLectura` e `importarExcelConsumos`: rechazar upsert sobre consumo ≠ PENDIENTE (import: error por fila, sin abortar el resto)
-- [ ] 3.4 Test: reimport sobre CON_ESTADO_CUENTA rechazado; fila PENDIENTE corregible vía `lecturaAnteriorOverride`
+- [x] 3.1 `generarEstadoCuenta` (estados-cuenta/actions.ts:52): cargar parcela 1 vez (`franquiciaAgua` + `propietario`), recalcular con `calcularMontoAgua`; eliminar query duplicada L129
+- [x] 3.2 `generarECSinNotificacion` (L201): usar parcela ya cargada (L168) + `calcularMontoAgua`
+- [x] 3.3 Guardia en `guardarLectura` e `importarExcelConsumos`: rechazar upsert sobre consumo ≠ PENDIENTE (import: error por fila, sin abortar el resto)
+- [x] 3.4 Test: reimport sobre CON_ESTADO_CUENTA rechazado; fila PENDIENTE corregible vía `lecturaAnteriorOverride`
 
 ## Phase 4: UI franquicia (sub-cambio 4)
 
-- [ ] 4.1 Quitar `franquiciaAguaM3` de `app/admin/configuracion/actions.ts`, `page.tsx` y `configuracion-form.tsx`
-- [ ] 4.2 Select "Franquicia Agua" en crear/editar parcela + badge/columna en tabla (patrón `tipoGc`, `propiedades-client.tsx`)
+- [x] 4.1 Quitar `franquiciaAguaM3` de `app/admin/configuracion/actions.ts`, `page.tsx` y `configuracion-form.tsx`
+- [x] 4.2 Select "Franquicia Agua" en crear/editar parcela + badge/columna en tabla (patrón `tipoGc`, `propiedades-client.tsx`)
 
 ## Phase 5: Notificaciones servidor (sub-cambio 5, TDD)
 
