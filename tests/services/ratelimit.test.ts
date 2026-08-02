@@ -73,6 +73,48 @@ describe("checkRateLimit", () => {
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(4);
   });
+
+  it("Requisito 4: agotar enviar-comunicado NO bloquea forgot-password (aislamiento por identifier + action)", async () => {
+    // La clave @@unique([identifier, action]) separa los contadores por acción
+    mockFindUnique.mockImplementation(({ where }: any) => {
+      const { identifier, action } = where.identifier_action;
+      if (identifier === "enviar-comunicado:user-1" && action === "enviar-comunicado") {
+        return Promise.resolve({
+          id: "rl-comunicado",
+          identifier,
+          action,
+          attempts: 5,
+          windowStart: new Date(),
+        });
+      }
+      return Promise.resolve(null);
+    });
+    mockUpdate.mockResolvedValue({} as any);
+    mockCreate.mockResolvedValue({
+      id: "rl-forgot",
+      identifier: "forgot-password:ip-1",
+      action: "forgot-password",
+      attempts: 1,
+      windowStart: new Date(),
+    });
+
+    // Comunicado agotado: 5 intentos dentro de la ventana
+    const comunicado = await checkRateLimit("enviar-comunicado:user-1", "enviar-comunicado");
+    expect(comunicado.allowed).toBe(false);
+
+    // Forgot-password con clave distinta: sin registro previo → primer intento permitido
+    const forgot = await checkRateLimit("forgot-password:ip-1", "forgot-password");
+    expect(forgot.allowed).toBe(true);
+    expect(forgot.remaining).toBe(4);
+    expect(mockCreate).toHaveBeenCalledWith({
+      data: {
+        identifier: "forgot-password:ip-1",
+        action: "forgot-password",
+        attempts: 1,
+        windowStart: expect.any(Date),
+      },
+    });
+  });
 });
 
 describe("resetRateLimit", () => {

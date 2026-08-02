@@ -55,10 +55,10 @@ Chain strategy: pending
 
 ## Phase 5: Notificaciones servidor (sub-cambio 5, TDD)
 
-- [ ] 5.1 RED: crear `tests/services/notificaciones.test.ts` (morosos por deudaTotal; EC EMITIDO en período actual = último `PeriodoGasto`; sin PeriodoGasto → solo deuda; dedupe multi-parcela; `parcelaId` = mayor deudaTotal) — fallan
-- [ ] 5.2 GREEN: `resolverDestinatarios(opcion, parcelaIds?)` en `lib/services/notificaciones.ts` (queries constantes, aislada y testeable)
-- [ ] 5.3 `enviarComunicadoAction`: zod `destinatarios`/`parcelaIds`, validar "parcelas" sin selección, `checkRateLimit("enviar-comunicado:...")`, `Notificacion.parcelaId`, errores por destinatario sin abortar
-- [ ] 5.4 Test: extender `tests/services/ratelimit.test.ts` (agotar `enviar-comunicado` no bloquea `forgot-password`)
+- [x] 5.1 RED: crear `tests/services/notificaciones.test.ts` (morosos por deudaTotal; EC EMITIDO en período actual = último `PeriodoGasto`; sin PeriodoGasto → solo deuda; dedupe multi-parcela; `parcelaId` = mayor deudaTotal) — fallan
+- [x] 5.2 GREEN: `resolverDestinatarios(opcion, parcelaIds?)` en `lib/services/notificaciones.ts` (queries constantes, aislada y testeable)
+- [x] 5.3 `enviarComunicadoAction`: zod `destinatarios`/`parcelaIds`, validar "parcelas" sin selección, `checkRateLimit("enviar-comunicado:...")`, `Notificacion.parcelaId`, errores por destinatario sin abortar
+- [x] 5.4 Test: extender `tests/services/ratelimit.test.ts` (agotar `enviar-comunicado` no bloquea `forgot-password`)
 
 ## Phase 6: Notificaciones UI (sub-cambio 6)
 
