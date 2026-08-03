@@ -74,5 +74,5 @@ Chain strategy: pending
 
 ## Phase 8: Cierre (sub-cambio 8)
 
-- [ ] 8.1 `npm run build` + `npm run lint` + `npx tsc --noEmit` sin errores
-- [ ] 8.2 Verificación manual: 47 parcelas en 30 m³, envío morosos/parcelas con dedupe, doble clic sin duplicados, edición solo PENDIENTE, EC previos intactos
+- [x] 8.1 `npm run build` + `npm run lint` + `npx tsc --noEmit` sin errores
+- [x] 8.2 Verificación manual: 47 parcelas en 30 m³, envío morosos/parcelas con dedupe, doble clic sin duplicados, edición solo PENDIENTE, EC previos intactos
