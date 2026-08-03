@@ -24,8 +24,8 @@ const guardarConfiguracionSchema = z.object({
   tarifaAgua31_40: z.number().optional().default(0),
   tarifaAgua41mas: z.number().optional().default(0),
   costoLuzKwh: z.number().optional().default(0),
-  montoGcNuevo: z.number().optional().default(0),
-  montoGcConHistorial: z.number().optional().default(0),
+  montoGcReducido: z.number().optional().default(0),
+  montoGcNormal: z.number().optional().default(0),
   mensajePieEc: z.string().optional().default(""),
 });
 
@@ -57,8 +57,8 @@ export async function guardarConfiguracion(formData: FormData) {
     tarifaAgua31_40: toNum(formData.get("tarifaAgua31_40") as string),
     tarifaAgua41mas: toNum(formData.get("tarifaAgua41mas") as string),
     costoLuzKwh: toNum(formData.get("costoLuzKwh") as string),
-    montoGcNuevo: toNum(formData.get("montoGcNuevo") as string),
-    montoGcConHistorial: toNum(formData.get("montoGcConHistorial") as string),
+    montoGcReducido: toNum(formData.get("montoGcReducido") as string),
+    montoGcNormal: toNum(formData.get("montoGcNormal") as string),
     mensajePieEc: (formData.get("mensajePieEc") as string) || "",
   };
 

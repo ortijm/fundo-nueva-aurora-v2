@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { calcularConsumo, actualizarDeudasParcela, MENSAJE_CONSUMO_NO_EDITABLE } from "@/lib/services/consumos";
 import { getConfig } from "@/lib/services/config";
+import { toDecimal } from "@/lib/utils";
 import { z } from "zod";
 import { withErrorHandling, unauthorized } from "@/lib/server-action-utils";
 
@@ -115,8 +116,8 @@ export async function generarGastosComunes(formData: FormData) {
     let creados = 0;
     for (const parcela of parcelas) {
       const monto = parcela.tipoGc === "REDUCIDO"
-        ? Number(config.montoGcNuevo)
-        : Number(config.montoGcConHistorial);
+        ? Number(config.montoGcReducido)
+        : Number(config.montoGcNormal);
 
       try {
         await prisma.consumoMensual.upsert({
@@ -250,7 +251,6 @@ export async function importarExcelConsumos(data: {
 
 const actualizarLecturaSchema = z.object({
   consumoId: z.string().min(1, "Consumo requerido"),
-  lecturaAnterior: z.number().min(0, "La lectura anterior no puede ser negativa"),
   lecturaActual: z.number().min(0, "La lectura actual no puede ser negativa"),
 });
 
@@ -258,21 +258,21 @@ const actualizarLecturaSchema = z.object({
  * Edición AJAX de lecturas (spec edicion-lecturas-consumos, Requisito 5):
  * auth ADMINISTRADOR, zod >= 0, solo consumos PENDIENTE, recálculo con la parcela
  * ya cargada (franquicia, sin query extra) y actualización de deudas de la parcela.
+ * SOLO recibe lecturaActual; lecturaAnterior se toma del registro en BD.
  */
 export async function actualizarLecturaConsumo(
   consumoId: string,
-  lecturaAnterior: number,
   lecturaActual: number
 ) {
   const session = await auth();
   if (!session || session.user.rol !== "ADMINISTRADOR") return unauthorized();
 
-  const parsed = actualizarLecturaSchema.safeParse({ consumoId, lecturaAnterior, lecturaActual });
+  const parsed = actualizarLecturaSchema.safeParse({ consumoId, lecturaActual });
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0].message };
   }
 
-  const { consumoId: id, lecturaAnterior: anterior, lecturaActual: actual } = parsed.data;
+  const { consumoId: id, lecturaActual: actual } = parsed.data;
 
   return withErrorHandling(async () => {
     const consumo = await prisma.consumoMensual.findUnique({
@@ -286,12 +286,13 @@ export async function actualizarLecturaConsumo(
     }
 
     // Decisión 2: la parcela ya viene cargada → recalcula sin query extra y con su franquicia
+    // lecturaAnterior se toma del consumo existente en BD
     const calc = await calcularConsumo(
       consumo.parcelaId,
       consumo.tipoConsumoId,
       consumo.periodo,
       actual,
-      anterior,
+      toDecimal(consumo.lecturaAnterior),
       consumo.parcela,
     );
 

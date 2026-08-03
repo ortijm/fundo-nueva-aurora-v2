@@ -10,7 +10,7 @@ interface Config {
   banco: string; tipoCuenta: string; numeroCuenta: string; emailPagos: string; rutTitular: string; nombreTitular: string;
   tarifaAgua1_10: number; tarifaAgua11_20: number; tarifaAgua21_30: number; tarifaAgua31_40: number; tarifaAgua41mas: number;
   costoLuzKwh: number;
-  montoGcNuevo: number; montoGcConHistorial: number; mensajePieEc: string;
+  montoGcReducido: number; montoGcNormal: number; mensajePieEc: string;
 }
 
 export function ConfiguracionForm({ config }: { config: Config }) {
@@ -144,12 +144,12 @@ export function ConfiguracionForm({ config }: { config: Config }) {
             <input name="costoLuzKwh" type="number" step="0.01" defaultValue={config.costoLuzKwh} className={inputClass} style={inputStyle} />
           </div>
           <div>
-            <label className={labelClass} style={labelStyle}>Gasto Común Nuevo Propietario ($)</label>
-            <input name="montoGcNuevo" type="number" step="1" defaultValue={config.montoGcNuevo} className={inputClass} style={inputStyle} />
+            <label className={labelClass} style={labelStyle}>Monto GC Reducido ($)</label>
+            <input name="montoGcReducido" type="number" step="1" defaultValue={config.montoGcReducido} className={inputClass} style={inputStyle} />
           </div>
           <div>
-            <label className={labelClass} style={labelStyle}>Gasto Común Con Historial ($)</label>
-            <input name="montoGcConHistorial" type="number" step="1" defaultValue={config.montoGcConHistorial} className={inputClass} style={inputStyle} />
+            <label className={labelClass} style={labelStyle}>Monto GC Normal ($)</label>
+            <input name="montoGcNormal" type="number" step="1" defaultValue={config.montoGcNormal} className={inputClass} style={inputStyle} />
           </div>
           <div className="sm:col-span-2 lg:col-span-3">
             <label className={labelClass} style={labelStyle}>Mensaje Pie de Estado de Cuenta</label>

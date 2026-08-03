@@ -39,8 +39,8 @@ export default async function ConfiguracionPage() {
           tarifaAgua31_40: Number(config.tarifaAgua31_40),
           tarifaAgua41mas: Number(config.tarifaAgua41mas),
           costoLuzKwh: Number(config.costoLuzKwh),
-          montoGcNuevo: Number(config.montoGcNuevo),
-          montoGcConHistorial: Number(config.montoGcConHistorial),
+          montoGcReducido: Number(config.montoGcReducido),
+          montoGcNormal: Number(config.montoGcNormal),
           mensajePieEc: config.mensajePieEc,
         }}
       />

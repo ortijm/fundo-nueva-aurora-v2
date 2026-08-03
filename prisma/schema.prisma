@@ -120,10 +120,10 @@ model ConfiguracionSistema {
   tarifaAgua21_30      Decimal @default(3500) @db.Decimal(10, 2)
   tarifaAgua31_40      Decimal @default(4000) @db.Decimal(10, 2)
   tarifaAgua41mas      Decimal @default(5000) @db.Decimal(10, 2)
-  costoLuzKwh          Decimal @default(180) @db.Decimal(10, 2)
-  montoGcNuevo         Decimal @default(15000) @db.Decimal(12, 2)
-  montoGcConHistorial  Decimal @default(25000) @db.Decimal(12, 2)
-  mensajePieEc         String  @default("") @db.VarChar(1000)
+  costoLuzKwh         Decimal @default(180) @db.Decimal(10, 2)
+  montoGcReducido     Decimal @default(15000) @db.Decimal(12, 2)
+  montoGcNormal       Decimal @default(25000) @db.Decimal(12, 2)
+  mensajePieEc        String  @default("") @db.VarChar(1000)
 
   @@map("configuracion_sistema")
 }

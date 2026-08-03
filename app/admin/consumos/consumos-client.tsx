@@ -103,16 +103,15 @@ export function ConsumosClient({
     if (!consumo.id) return;
     if (guardando) return; // Escenario 7: bloquea el doble guardado mientras uno está en curso
 
-    const anterior = parseFloat(edicion[rowKey]?.anterior ?? String(consumo.lecturaAnterior));
     const actual = parseFloat(edicion[rowKey]?.actual ?? String(consumo.lecturaActual));
-    if (isNaN(anterior) || isNaN(actual) || anterior < 0 || actual < 0) {
-      toast.error("Las lecturas deben ser números mayores o iguales a 0");
+    if (isNaN(actual) || actual < 0) {
+      toast.error("La lectura debe ser un número mayor o igual a 0");
       return;
     }
 
     setGuardando(rowKey);
     try {
-      const result = await actualizarLecturaConsumo(consumo.id, anterior, actual);
+      const result = await actualizarLecturaConsumo(consumo.id, actual);
       if (!result.success) {
         toast.error(result.error); // conserva los valores editados para corregirlos
         return;
@@ -126,8 +125,10 @@ export function ConsumosClient({
   }
 
   // Celda editable SOLO si estado === "PENDIENTE"; si no, input disabled con tooltip (Requisito 4)
+  // lecturaAnterior: SIEMPRE disabled (inclusive en PENDIENTE)
+  // lecturaActual: editable solo en estado === "PENDIENTE"
   function renderCeldaLectura(rowKey: string, consumo: ConsumoRow, campo: "anterior" | "actual") {
-    const editable = consumo.estado === "PENDIENTE";
+    const editable = campo === "actual" && consumo.estado === "PENDIENTE";
     const bloqueada = guardando === rowKey;
     const valorBase = campo === "anterior" ? consumo.lecturaAnterior : consumo.lecturaActual;
     const valor = edicion[rowKey]?.[campo] ?? String(valorBase);
@@ -155,7 +156,7 @@ export function ConsumosClient({
         onBlur={() => guardarConsumoFila(rowKey, consumo)}
         className="w-28 text-right px-2 py-1.5 text-sm rounded-lg disabled:opacity-50"
         style={{ background: "var(--surface-low)", color: "var(--on-surface)" }}
-        title={!editable ? "Consumo asociado a estado de cuenta o pago" : undefined}
+        title={!editable ? (campo === "anterior" ? "La lectura anterior no es editable" : "Consumo asociado a estado de cuenta o pago") : undefined}
       />
     );
   }

@@ -45,8 +45,8 @@ async function main() {
       tarifaAgua31_40: 4000,
       tarifaAgua41mas: 5000,
       costoLuzKwh: 291,
-      montoGcNuevo: 15000,
-      montoGcConHistorial: 25000,
+      montoGcReducido: 15000,
+      montoGcNormal: 25000,
     },
     update: {},
   });
