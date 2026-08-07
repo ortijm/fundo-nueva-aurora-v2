@@ -47,3 +47,19 @@ next-env.d.ts
 
 # claude
 .claude/settings.local.json
+
+# IDE
+.cursor/
+.atl/
+
+# Build
+dist/
+
+# Cache
+.cache/
+
+# Reports
+coverage/
+
+# Temporary
+tmp/
